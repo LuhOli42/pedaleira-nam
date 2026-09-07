@@ -1,0 +1,32 @@
+juce_add_console_app(PedaleiraNAM_Tests
+  PRODUCT_NAME "Pedaleira NAM Tests"
+  BUNDLE_ID "com.pedaleiranam.PedaleiraNAMTests"
+)
+
+target_sources(PedaleiraNAM_Tests PRIVATE
+  RunTests.cpp
+  SignalGraphTests.cpp
+  DeferredReclaimerTests.cpp
+  ParameterManagerTests.cpp
+  ../Source/EffectRegistry.cpp
+  ../Source/Engine/SignalGraph.cpp
+  ../Source/Engine/ParameterManager.cpp
+)
+
+target_include_directories(PedaleiraNAM_Tests PRIVATE ../Source)
+
+target_compile_definitions(PedaleiraNAM_Tests PRIVATE
+  JUCE_WEB_BROWSER=0
+  JUCE_USE_CURL=0
+)
+
+target_link_libraries(PedaleiraNAM_Tests PRIVATE
+  juce::juce_audio_basics
+  juce::juce_audio_processors
+  juce::juce_core
+  juce::juce_events
+  juce::juce_recommended_config_flags
+  juce::juce_recommended_warning_flags
+)
+
+add_test(NAME PedaleiraNAM_UnitTests COMMAND PedaleiraNAM_Tests)

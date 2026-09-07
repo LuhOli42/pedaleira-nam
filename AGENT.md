@@ -1,87 +1,87 @@
-# AGENT.md — guia para agentes trabalhando neste repositório
+# AGENT.md — guide for agents working in this repository
 
-Este arquivo existe para dar contexto a um agente de IA (Claude Code ou outro) que abrir este repositório sem ter participado das decisões anteriores. Leia isto antes de tocar em qualquer código.
+This file exists to give context to an AI agent (Claude Code or otherwise) opening this repository without having been part of the earlier decisions. Read this before touching any code.
 
-A fonte de verdade da arquitetura é [`ARQUITETURA.md`](./ARQUITETURA.md) — este arquivo aqui é um resumo operacional, não uma duplicata. Se os dois divergirem, `ARQUITETURA.md` vence, e este arquivo deve ser corrigido.
+The source of truth for the architecture is [`ARCHITECTURE.md`](./ARCHITECTURE.md) — this file is an operational summary, not a duplicate. If the two disagree, `ARCHITECTURE.md` wins, and this file should be corrected.
 
 ---
 
-## O que é este projeto
+## What this project is
 
-Uma pedaleira/processador de guitarra digital para uso ao vivo: hardware + software, C++/JUCE, com Neural Amp Modeling (NAM), pedais, cab/IR, e integração com a TONE3000. O objetivo final é um produto físico real, não um protótipo de demonstração.
+A digital guitar processor/pedalboard for live use: hardware + software, C++/JUCE, with Neural Amp Modeling (NAM), pedals, cab/IR, and TONE3000 integration. The goal is a real physical product, not a demo prototype.
 
-**Estratégia de desenvolvimento em duas pernas:**
-1. Tudo (Fases 0–5) é escrito e validado num **PC x86 Linux comum**, com JUCE nativo sobre ALSA/PipeWire.
-2. Só na **Fase 6** o mesmo código é portado para o hardware-alvo: **Radxa Cubie A7S** (Allwinner A733), com fallback documentado para Raspberry Pi 5 / Orange Pi 5 Plus caso o bring-up do A733 não amadureça a tempo.
+**Two-legged development strategy:**
+1. Everything (Phases 0–5) is written and validated on a **regular x86 Linux PC**, with native JUCE over ALSA/PipeWire.
+2. Only in **Phase 6** does the same code get ported to the target hardware: **Radxa Cubie A7S** (Allwinner A733), with a documented fallback to Raspberry Pi 5 / Orange Pi 5 Plus in case the A733 bring-up doesn't mature in time.
 
-Isso significa: **nenhum código de Fase 0–5 deve assumir hardware ARM específico.** Se você é um agente escrevendo código nessa fase e sente vontade de otimizar para um SoC específico, pare — isso pertence à Fase 6.
+This means: **no Phase 0–5 code should assume any specific ARM hardware.** If you're an agent writing code in that phase and you feel the urge to optimize for a specific SoC, stop — that belongs to Phase 6.
 
-## A regra que não se negocia: a fronteira realtime
+## The rule that is not up for negotiation: the realtime boundary
 
-Existem duas threads conceituais no sistema, e a comunicação entre elas é estritamente unidirecional em primitivas permitidas:
+There are two conceptual threads in the system, and communication between them is strictly one-directional through allowed primitives only:
 
-- **Thread de áudio (realtime):** guitarra → input → `AudioEngine` → `SignalGraph` → output. Processa em blocos de tamanho fixo, com orçamento de tempo em microssegundos.
-- **Thread de controle/rede:** UI, `PresetManager`, `Tone3000Manager`, `ModelRepository`. Pode demorar o quanto precisar.
+- **Audio thread (realtime):** guitar → input → `AudioEngine` → `SignalGraph` → output. Processes in fixed-size blocks, with a microsecond-scale time budget.
+- **Control/network thread:** UI, `PresetManager`, `Tone3000Manager`, `ModelRepository`. Can take as long as it needs.
 
-**A thread de áudio nunca:**
-- aloca memória (`new`/`malloc`) fora do `prepare()`
-- toma um mutex bloqueante
-- faz I/O de rede, disco, ou log em arquivo
-- chama qualquer coisa com latência não-determinística (exceções, RTTI dinâmico, strings)
-- espera resposta da thread de controle
+**The audio thread never:**
+- allocates memory (`new`/`malloc`) outside of `prepare()`
+- takes a blocking mutex
+- performs network I/O, disk I/O, or file logging
+- calls anything with non-deterministic latency (exceptions, dynamic RTTI, strings)
+- waits on a response from the control thread
 
-A ponte entre as duas threads é sempre uma destas três primitivas — nunca outra coisa:
-1. **Troca atômica de ponteiro** — para modelos NAM e grafos de sinal completos
-2. **Fila SPSC lock-free** — para parâmetros e telemetria (CPU%, clipping)
-3. **Double buffering** — para troca de presets inteiros
+The bridge between the two threads is always one of these three primitives — never anything else:
+1. **Atomic pointer swap** — for NAM models and complete signal graphs
+2. **Lock-free SPSC queue** — for parameters and telemetry (CPU%, clipping)
+3. **Double buffering** — for swapping whole presets
 
-Se uma mudança de código introduzir qualquer chamada bloqueante dentro de `AudioEngine::process()` ou de qualquer `EffectProcessor::process()`, é um bug de arquitetura, não um detalhe de implementação — rejeite ou corrija antes de prosseguir.
+If a code change introduces any blocking call inside `AudioEngine::process()` or any `EffectProcessor::process()`, that's an architecture bug, not an implementation detail — reject it or fix it before moving on.
 
-## Estrutura de diretórios (ver `ARQUITETURA.md` seção C para o contrato completo)
+## Directory layout (see `ARCHITECTURE.md` section C for the full contract)
 
 ```
 Source/
-├── Engine/       # AudioEngine, SignalGraph, ParameterManager — a fronteira realtime vive aqui
-├── Effects/      # EffectProcessor (classe-base) + cada pedal/NAM/cab como subclasse independente
-├── Models/       # ModelRepository, ModelValidator, ModelLoader — nada aqui roda na audio thread
-├── Tone3000/     # Tone3000Manager — módulo OPCIONAL e plugável, o produto funciona sem ele
-├── Presets/      # PresetManager — serialização + double buffering de troca
-└── UI/           # só a partir da Fase 7 — lê estado via FIFO lock-free, nunca chama o Engine direto
+├── Engine/       # AudioEngine, SignalGraph, ParameterManager — the realtime boundary lives here
+├── Effects/      # EffectProcessor (base class) + every pedal/NAM/cab as an independent subclass
+├── Models/       # ModelRepository, ModelValidator, ModelLoader — nothing here ever runs on the audio thread
+├── Tone3000/     # Tone3000Manager — OPTIONAL, pluggable module; the product works without it
+├── Presets/      # PresetManager — serialization + double-buffered swapping
+└── UI/           # only from Phase 7 onward — reads state via a lock-free FIFO, never calls the Engine directly
 ```
 
-Todo novo efeito (pedal, modulação, delay, reverb, pitch, o que for) é uma nova subclasse de `EffectProcessor` em `Effects/`, registrada em `EffectRegistry`. Não crie caminhos especiais no `SignalGraph` para tipos específicos de efeito — o grafo não sabe (nem deve saber) a diferença entre um `GateProcessor` e um `NAMProcessor`.
+Every new effect (pedal, modulation, delay, reverb, pitch, whatever) is a new `EffectProcessor` subclass in `Effects/`, registered in `EffectRegistry`. Don't create special cases in `SignalGraph` for specific effect types — the graph doesn't know (and shouldn't know) the difference between a `GateProcessor` and a `NAMProcessor`.
 
-## Status do roadmap (ver `ARQUITETURA.md` seção F)
+## Roadmap status (see `ARCHITECTURE.md` section F)
 
-| Fase | Status | Hardware |
+| Phase | Status | Hardware |
 |---|---|---|
-| 0 — Arquitetura + esqueleto JUCE/CMake | **em andamento** | PC x86 |
-| 1 — Audio Engine + Pedais + NAM + Cab/IR + TONE3000 + Presets | não iniciada | PC x86 |
-| 2 — Delay + Reverb | não iniciada | PC x86 |
-| 3 — Modulações | não iniciada | PC x86 |
-| 4 — Pitch | não iniciada | PC x86 |
-| 5 — Looper, afinador, MIDI, routing avançado | não iniciada | PC x86 |
-| 6 — Port para Radxa Cubie A7S | não iniciada | Cubie A7S |
-| 7 — UI touch completa | não iniciada | Cubie A7S + touchscreen |
-| 8–10 — Footswitches, PCB, validação final | não iniciada | hardware final |
+| 0 — Architecture + JUCE/CMake skeleton | **in progress** | PC x86 |
+| 1 — Audio Engine + Pedals + NAM + Cab/IR + TONE3000 + Presets | not started | PC x86 |
+| 2 — Delay + Reverb | not started | PC x86 |
+| 3 — Modulation | not started | PC x86 |
+| 4 — Pitch | not started | PC x86 |
+| 5 — Looper, tuner, MIDI, advanced routing | not started | PC x86 |
+| 6 — Port to the Radxa Cubie A7S | not started | Cubie A7S |
+| 7 — Full touch UI | not started | Cubie A7S + touchscreen |
+| 8–10 — Footswitches, PCB, final validation | not started | final hardware |
 
-Atualize esta tabela quando uma fase for concluída — não deixe ela ficar desatualizada silenciosamente.
+Update this table when a phase is completed — don't let it silently go stale.
 
-## Decisões já tomadas (não reabrir sem motivo novo)
+## Decisions already made (don't reopen without a new reason)
 
-- **Motor de NAM:** `NeuralAudio` (mikeoliphant, MIT) como backend primário — já tem SIMD dedicado para RPi4/RPi5. `NeuralAmpModelerCore` (MIT, oficial) como referência/fallback. **Não usar AIDA-X ou código GuitarML diretamente** — ambos GPL-3.0, contaminação de licença em produto fechado. Usar apenas como referência de arquitetura, se necessário.
-- **NPU:** não conte com ela para NAM. RKNN/eIQ/VIP9000 não têm suporte confirmado a Conv1D causal/dilatada — todo o processamento de NAM é CPU (NEON quando disponível).
-- **Convolução de IR:** particionada, via `juce::dsp::Convolution` como ponto de partida.
-- **TONE3000:** integração via API oficial (OAuth2+PKCE), mas como módulo **opcional** em `Tone3000/` — o uso comercial em hardware embarcado ainda não tem confirmação contratual (ver riscos em `ARQUITETURA.md` seção I). Não acoplar nenhuma feature central do produto a essa integração.
-- **Sample rate/buffer padrão da Fase 1:** 48 kHz, bloco de 128 samples (~2,7 ms) — vai apertando conforme o profiling permitir, meta final de round-trip < 10 ms.
+- **NAM engine:** `NeuralAudio` (mikeoliphant, MIT) as the primary backend — already has dedicated SIMD for RPi4/RPi5. `NeuralAmpModelerCore` (MIT, official) as reference/fallback. **Do not use AIDA-X or GuitarML code directly** — both GPL-3.0, license contamination in a closed-source product. Use them only as architectural reference, if needed.
+- **NPU:** don't count on it for NAM. RKNN/eIQ/VIP9000 have no confirmed support for causal/dilated Conv1D — all NAM processing is CPU-bound (NEON where available).
+- **IR convolution:** partitioned, via `juce::dsp::Convolution` as a starting point.
+- **TONE3000:** integrate via the official API (OAuth2+PKCE), but as an **optional** module under `Tone3000/` — commercial use on embedded hardware still has no contractual confirmation (see risks in `ARCHITECTURE.md` section I). Don't couple any core product feature to this integration.
+- **Phase 1 default sample rate/buffer:** 48 kHz, 128-sample block (~2.7 ms) — tightening as profiling allows, final round-trip target < 10 ms.
 
-## Convenções de código
+## Code conventions
 
-- C++/JUCE, CMake como build system.
-- Sem comentários explicando o óbvio. Comente apenas a razão não-óbvia (ex.: por que um lock-free queue tem esse tamanho específico, por que um cast unsafe é seguro aqui).
-- Toda classe de efeito implementa o contrato completo de `EffectProcessor` (ver `ARQUITETURA.md` seção C) — sem exceções parciais.
-- Testes de benchmark isolado por processor ficam em `Tests/`, não misturados com testes funcionais.
+- C++/JUCE, CMake as the build system.
+- No comments explaining the obvious. Only comment the non-obvious reason (e.g. why a lock-free queue has that specific size, why an unsafe cast is actually safe here).
+- Every effect class implements the full `EffectProcessor` contract (see `ARCHITECTURE.md` section C) — no partial exceptions.
+- Isolated per-processor benchmark tests live in `Tests/`, not mixed in with functional tests.
 
-## Onde ficam as pendências e riscos
+## Where pending issues and risks live
 
-Não repita a análise de risco aqui — ela vive em `ARQUITETURA.md` seção I e é mantida lá. Se você, como agente, encontrar um risco novo durante a implementação, adicione-o na tabela de riscos do `ARQUITETURA.md`, não neste arquivo.
+Don't re-derive the risk analysis here — it lives in `ARCHITECTURE.md` section I and is maintained there. If you, as an agent, find a new risk during implementation, add it to the risk table in `ARCHITECTURE.md`, not to this file.
