@@ -31,8 +31,34 @@ public:
     bool isBypassed() const noexcept { return bypassed.load (std::memory_order_relaxed); }
 
     virtual juce::AudioProcessorParameterGroup* getParameters() = 0;
-    virtual std::unique_ptr<juce::XmlElement> getState() const = 0;
-    virtual void setState (const juce::XmlElement& state) = 0;
+
+    /**
+        Default implementation: walks getParameters() and serializes every
+        juce::AudioParameterFloat by its paramID. Covers every processor
+        whose state is fully described by its float parameters (true for
+        all the Phase 1 pedals) -- override only if a processor needs more
+        than that (e.g. a loaded model reference).
+    */
+    virtual std::unique_ptr<juce::XmlElement> getState() const
+    {
+        auto xml = std::make_unique<juce::XmlElement> ("EffectState");
+
+        if (auto* group = const_cast<EffectProcessor*> (this)->getParameters())
+            for (auto* param : group->getParameters (true))
+                if (auto* floatParam = dynamic_cast<juce::AudioParameterFloat*> (param))
+                    xml->setAttribute (floatParam->paramID, (double) floatParam->get());
+
+        return xml;
+    }
+
+    virtual void setState (const juce::XmlElement& state)
+    {
+        if (auto* group = getParameters())
+            for (auto* param : group->getParameters (true))
+                if (auto* floatParam = dynamic_cast<juce::AudioParameterFloat*> (param))
+                    if (state.hasAttribute (floatParam->paramID))
+                        *floatParam = (float) state.getDoubleAttribute (floatParam->paramID);
+    }
 
     virtual const char* getName() const = 0;
 

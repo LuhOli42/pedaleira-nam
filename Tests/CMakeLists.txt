@@ -8,9 +8,15 @@ target_sources(PedaleiraNAM_Tests PRIVATE
   SignalGraphTests.cpp
   DeferredReclaimerTests.cpp
   ParameterManagerTests.cpp
+  GateProcessorTests.cpp
+  CompressorProcessorTests.cpp
+  OverdriveProcessorTests.cpp
   ../Source/EffectRegistry.cpp
   ../Source/Engine/SignalGraph.cpp
   ../Source/Engine/ParameterManager.cpp
+  ../Source/Effects/GateProcessor.cpp
+  ../Source/Effects/CompressorProcessor.cpp
+  ../Source/Effects/OverdriveProcessor.cpp
 )
 
 target_include_directories(PedaleiraNAM_Tests PRIVATE ../Source)

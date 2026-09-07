@@ -30,6 +30,9 @@ target_sources(PedaleiraNAM PRIVATE
   Source/Engine/AudioEngine.cpp
   Source/Engine/SignalGraph.cpp
   Source/Engine/ParameterManager.cpp
+  Source/Effects/GateProcessor.cpp
+  Source/Effects/CompressorProcessor.cpp
+  Source/Effects/OverdriveProcessor.cpp
 )
 
 target_include_directories(PedaleiraNAM PRIVATE Source)

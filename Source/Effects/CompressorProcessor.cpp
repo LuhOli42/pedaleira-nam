@@ -1,0 +1,80 @@
+#include "CompressorProcessor.h"
+
+namespace pedaleira
+{
+
+CompressorProcessor::CompressorProcessor()
+{
+    auto threshold = std::make_unique<juce::AudioParameterFloat> (
+        "comp_threshold", "Threshold",
+        juce::NormalisableRange<float> (-60.0f, 0.0f), -18.0f);
+    auto ratioParam = std::make_unique<juce::AudioParameterFloat> (
+        "comp_ratio", "Ratio",
+        juce::NormalisableRange<float> (1.0f, 20.0f, 0.0f, 0.5f), 4.0f);
+    auto attack = std::make_unique<juce::AudioParameterFloat> (
+        "comp_attack", "Attack",
+        juce::NormalisableRange<float> (0.1f, 100.0f, 0.0f, 0.4f), 5.0f);
+    auto release = std::make_unique<juce::AudioParameterFloat> (
+        "comp_release", "Release",
+        juce::NormalisableRange<float> (10.0f, 1000.0f, 0.0f, 0.4f), 80.0f);
+    auto makeup = std::make_unique<juce::AudioParameterFloat> (
+        "comp_makeup", "Makeup",
+        juce::NormalisableRange<float> (-12.0f, 24.0f), 0.0f);
+
+    thresholdDb = threshold.get();
+    ratio = ratioParam.get();
+    attackMs = attack.get();
+    releaseMs = release.get();
+    makeupDb = makeup.get();
+
+    parameters = std::make_unique<juce::AudioProcessorParameterGroup> (
+        "compressor", "Compressor", "|",
+        std::move (threshold), std::move (ratioParam), std::move (attack),
+        std::move (release), std::move (makeup));
+}
+
+void CompressorProcessor::prepare (double sampleRate, int, int)
+{
+    detector.prepare (sampleRate);
+    reset();
+}
+
+void CompressorProcessor::reset()
+{
+    detector.reset();
+}
+
+void CompressorProcessor::process (juce::AudioBuffer<float>& buffer)
+{
+    detector.setAttackTime (attackMs->get());
+    detector.setReleaseTime (releaseMs->get());
+
+    const float threshold = thresholdDb->get();
+    const float r = juce::jmax (1.0f, ratio->get());
+    const float makeup = makeupDb->get();
+
+    const int numChannels = buffer.getNumChannels();
+    const int numSamples = buffer.getNumSamples();
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        float peak = 0.0f;
+        for (int ch = 0; ch < numChannels; ++ch)
+            peak = juce::jmax (peak, std::abs (buffer.getSample (ch, i)));
+
+        const float envelope = detector.processSample (peak);
+        const float envelopeDb = juce::Decibels::gainToDecibels (envelope, -100.0f);
+
+        float gainDb = makeup;
+        const float overDb = envelopeDb - threshold;
+        if (overDb > 0.0f)
+            gainDb += -overDb * (1.0f - 1.0f / r);
+
+        const float gainLinear = juce::Decibels::decibelsToGain (gainDb);
+
+        for (int ch = 0; ch < numChannels; ++ch)
+            buffer.setSample (ch, i, buffer.getSample (ch, i) * gainLinear);
+    }
+}
+
+} // namespace pedaleira

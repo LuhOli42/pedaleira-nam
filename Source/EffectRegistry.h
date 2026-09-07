@@ -30,4 +30,8 @@ private:
     std::map<juce::String, Creator> creators;
 };
 
+/** Registers every built-in effect processor. Concrete types stay decoupled
+    from SignalGraph/AudioEngine -- this is the one place that knows them all. */
+void registerBuiltInEffects (EffectRegistry& registry);
+
 } // namespace pedaleira

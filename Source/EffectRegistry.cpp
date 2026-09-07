@@ -1,7 +1,18 @@
 #include "EffectRegistry.h"
 
+#include "Effects/CompressorProcessor.h"
+#include "Effects/GateProcessor.h"
+#include "Effects/OverdriveProcessor.h"
+
 namespace pedaleira
 {
+
+void registerBuiltInEffects (EffectRegistry& registry)
+{
+    registry.registerType ("NoiseGate", [] { return std::make_unique<GateProcessor>(); });
+    registry.registerType ("Compressor", [] { return std::make_unique<CompressorProcessor>(); });
+    registry.registerType ("Overdrive", [] { return std::make_unique<OverdriveProcessor>(); });
+}
 
 void EffectRegistry::registerType (const juce::String& name, Creator creator)
 {
