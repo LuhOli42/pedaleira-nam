@@ -11,14 +11,13 @@ void ChainContainer::setBlockBounds (std::vector<juce::Rectangle<float>> bounds)
 
 void ChainContainer::paint (juce::Graphics& g)
 {
-    g.setColour (juce::Colours::white.withAlpha (0.35f));
-
-    for (size_t i = 0; i + 1 < blockBounds.size(); ++i)
-    {
-        const auto a = blockBounds[i];
-        const auto b = blockBounds[i + 1];
-        g.drawLine (a.getRight(), a.getCentreY(), b.getX(), b.getCentreY(), 2.0f);
-    }
+    // The signal path, always on screen -- not just gaps between blocks.
+    // A plain Component's paint() runs before its children's, so this sits
+    // behind the blocks and the "+" tile for free; they visually sit ON it,
+    // matching the reference UI's always-visible input-to-output line.
+    const float y = (float) getHeight() * 0.5f;
+    g.setColour (juce::Colours::white.withAlpha (0.3f));
+    g.drawLine (0.0f, y, (float) getWidth(), y, 2.0f);
 }
 
 AddBlockButton::AddBlockButton() : juce::Button ("addBlock")

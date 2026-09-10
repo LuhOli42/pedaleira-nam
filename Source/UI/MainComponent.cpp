@@ -1,7 +1,6 @@
 #include "MainComponent.h"
 
 #include "Tone3000Panel.h"
-#include "../Tone3000/GearRouting.h"
 
 #include <algorithm>
 
@@ -13,26 +12,6 @@ namespace
     constexpr int blockWidth = 130;
     constexpr int blockHeight = 90;
     constexpr int blockGap = 10;
-
-    // GearRouting.h gives back an EffectRegistry key ("NAMAmp", "Cab", ...);
-    // there's no reverse lookup from a live EffectProcessor* to the key it
-    // was created from, so this leans on each concrete processor's
-    // getName() being kept in sync with its registry key by construction
-    // (see EffectRegistry::registerBuiltInEffects). Good enough without a
-    // wider refactor to track registry keys alongside `chain`.
-    bool matchesRegistryRole (EffectProcessor* p, const juce::String& registryRole)
-    {
-        if (p == nullptr)
-            return false;
-
-        const juce::String actualName (p->getName());
-
-        if (registryRole == "NAMAmp")      return actualName == "NAM Amp";
-        if (registryRole == "NeuralDrive") return actualName == "Neural Drive";
-        if (registryRole == "Cab")         return actualName == "Cab";
-        if (registryRole == "Reverb")      return actualName == "Reverb";
-        return false;
-    }
 }
 
 MainComponent::MainComponent()
@@ -57,6 +36,7 @@ MainComponent::MainComponent()
 
     parameterPanel.onRemoveRequested = [this] (EffectProcessor* p) { removeEffect (p); };
     parameterPanel.setModelsDirectory (getModelsDirectory());
+    parameterPanel.setTone3000Manager (tone3000);
     addAndMakeVisible (parameterPanel);
 
     if (! audioEngine.start())
@@ -83,6 +63,7 @@ void MainComponent::addEffect (const juce::String& registryName)
 
     auto block = std::make_unique<EffectBlockComponent> (*raw);
     block->onClicked = [this, raw] { selectBlock (raw); };
+    block->onDragEnded = [this] (EffectBlockComponent& b) { handleBlockDragEnded (b); };
     chainContainer.addAndMakeVisible (*block);
     blocks.add (block.release());
 
@@ -155,6 +136,38 @@ void MainComponent::layoutChain()
     chainContainer.setBlockBounds (std::move (bounds));
 }
 
+void MainComponent::handleBlockDragEnded (EffectBlockComponent& blockComp)
+{
+    const int oldIndex = blocks.indexOf (&blockComp);
+    if (oldIndex < 0)
+    {
+        layoutChain();
+        return;
+    }
+
+    // Where it was dropped, translated back into a slot index on the clean grid.
+    const int centreX = blockComp.getBounds().getCentreX();
+    const int newIndex = juce::jlimit (0, blocks.size() - 1, centreX / (blockWidth + blockGap));
+
+    if (newIndex != oldIndex)
+    {
+        blocks.move (oldIndex, newIndex);
+
+        // `chain` (the actual processor order SignalGraph reads) has to move
+        // in exact lockstep with `blocks` -- std::rotate over the same
+        // [old, new] span is what OwnedArray::move does internally, mirrored
+        // here by hand since chain is a plain std::vector.
+        if (newIndex > oldIndex)
+            std::rotate (chain.begin() + oldIndex, chain.begin() + oldIndex + 1, chain.begin() + newIndex + 1);
+        else
+            std::rotate (chain.begin() + newIndex, chain.begin() + oldIndex, chain.begin() + oldIndex + 1);
+
+        rebuildSignalGraph();
+    }
+
+    layoutChain(); // snaps every block, including the dragged one, back onto the clean grid
+}
+
 void MainComponent::showAddEffectMenu()
 {
     auto names = registry.getRegisteredNames();
@@ -180,13 +193,10 @@ juce::File MainComponent::getModelsDirectory() const
 
 void MainComponent::showTone3000Panel()
 {
-    auto panel = std::make_unique<Tone3000Panel> (tone3000, getModelsDirectory());
+    // Just login/key now -- search and download live in ParameterPanel,
+    // contextual to whichever block is selected. See Tone3000Panel.h.
+    auto panel = std::make_unique<Tone3000Panel> (tone3000);
     auto* panelPtr = panel.get();
-
-    panelPtr->onModelDownloaded = [this] (juce::File file, juce::String gear, juce::String format)
-    {
-        loadDownloadedModel (file, gear, format);
-    };
 
     juce::DialogWindow::LaunchOptions options;
     options.content.setOwned (panel.release());
@@ -203,51 +213,6 @@ void MainComponent::showTone3000Panel()
 
     auto* window = options.launchAsync();
     panelPtr->onRequestClose = [window] { if (window != nullptr) window->exitModalState (0); };
-}
-
-void MainComponent::loadDownloadedModel (const juce::File& file, const juce::String& gear, const juce::String& format)
-{
-    // Tone3000Panel already refused unsupported formats before downloading,
-    // so route.supported is expected true here -- this call just decides
-    // WHICH block type the file belongs in.
-    const auto route = tone3000routing::routeFor (gear, format);
-
-    EffectProcessor* target = nullptr;
-
-    if (route.registryRole.isNotEmpty() && matchesRegistryRole (selectedProcessor, route.registryRole))
-    {
-        target = selectedProcessor; // already have the right kind of block selected
-    }
-    else if (route.registryRole.isNotEmpty())
-    {
-        addEffect (route.registryRole); // creates it, adds to the chain, and selects it
-        target = selectedProcessor;
-    }
-    else if (selectedProcessor != nullptr && selectedProcessor->wantsModelFile())
-    {
-        target = selectedProcessor; // outboard/experimental gear -- no fixed role, use whatever's selected
-    }
-
-    if (target == nullptr)
-    {
-        juce::AlertWindow::showMessageBoxAsync (
-            juce::MessageBoxIconType::InfoIcon, "Model downloaded",
-            "Saved to:\n" + file.getFullPathName()
-                + "\n\nNo matching block type in the chain -- add one manually (\"" + gear
-                + "\" gear), then load it from there.");
-        return;
-    }
-
-    try
-    {
-        target->loadModelFile (file);
-        parameterPanel.refresh();
-    }
-    catch (const std::exception& e)
-    {
-        juce::AlertWindow::showMessageBoxAsync (
-            juce::MessageBoxIconType::WarningIcon, "Failed to load model", e.what());
-    }
 }
 
 void MainComponent::timerCallback()

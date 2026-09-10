@@ -95,7 +95,7 @@ void NAMProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
     g.setColour (juce::Colours::white);
 
-    if (isDriveRole())
+    if (isPedalRole())
     {
         // A lightning bolt -- the same visual language as "neural"/energy,
         // and it reads as clearly different from Overdrive's clipped wave.

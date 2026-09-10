@@ -43,12 +43,12 @@ public:
 private:
     void addEffect (const juce::String& registryName);
     void removeEffect (EffectProcessor* processor);
+    void handleBlockDragEnded (EffectBlockComponent& block);
     void selectBlock (EffectProcessor* processor);
     void rebuildSignalGraph();
     void layoutChain();
     void showAddEffectMenu();
     void showTone3000Panel();
-    void loadDownloadedModel (const juce::File& file, const juce::String& gear, const juce::String& format);
     juce::File getModelsDirectory() const;
 
     void timerCallback() override;

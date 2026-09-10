@@ -16,10 +16,10 @@ void registerBuiltInEffects (EffectRegistry& registry)
     registry.registerType ("Overdrive", [] { return std::make_unique<OverdriveProcessor>(); });
 
     // Same wrapper class, two chain roles -- only the .nam file loaded into
-    // each instance determines whether it sounds like an amp or a drive
-    // pedal. See NAMProcessor.h.
-    registry.registerType ("NAMAmp", [] { return std::make_unique<NAMProcessor> ("NAM Amp"); });
-    registry.registerType ("NeuralDrive", [] { return std::make_unique<NAMProcessor> ("Neural Drive"); });
+    // each instance determines whether it sounds like an amp or a pedal.
+    // See NAMProcessor.h.
+    registry.registerType ("NeuralAmp", [] { return std::make_unique<NAMProcessor> ("Neural Amp"); });
+    registry.registerType ("NeuralPedal", [] { return std::make_unique<NAMProcessor> ("Neural Pedal"); });
 
     // Same story, one class, two roles -- IRLoaderProcessor convolves with
     // a WAV impulse response either way; "Cab" vs "Reverb" is just which

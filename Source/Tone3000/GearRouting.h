@@ -31,10 +31,10 @@ inline GearRoute routeFor (const juce::String& gear, const juce::String& format)
     if (format == "nam")
     {
         if (gear == "pedal")
-            return { true, "pedals", "NeuralDrive", ".nam" };
+            return { true, "pedals", "NeuralPedal", ".nam" };
 
         if (gear == "amp" || gear == "amp-cab" || gear == "full-rig")
-            return { true, "amps", "NAMAmp", ".nam" };
+            return { true, "amps", "NeuralAmp", ".nam" };
 
         // outboard / experimental nam captures -- loadable, but no chain
         // role fits automatically; the user places it themselves.
@@ -63,8 +63,8 @@ inline GearRoute routeFor (const juce::String& gear, const juce::String& format)
     a block of that type doesn't require re-navigating to find the file. */
 inline juce::String subfolderForProcessorName (const juce::String& processorName)
 {
-    if (processorName == "NAM Amp")      return "amps";
-    if (processorName == "Neural Drive") return "pedals";
+    if (processorName == "Neural Amp")   return "amps";
+    if (processorName == "Neural Pedal") return "pedals";
     if (processorName == "Cab")          return "cabs";
     if (processorName == "Reverb")       return "reverbs";
     return {};
@@ -75,9 +75,25 @@ inline juce::String fileWildcardForProcessorName (const juce::String& processorN
 {
     if (processorName == "Cab" || processorName == "Reverb")
         return "*.wav";
-    if (processorName == "NAM Amp" || processorName == "Neural Drive")
+    if (processorName == "Neural Amp" || processorName == "Neural Pedal")
         return "*.nam";
     return "*.*";
+}
+
+/** The forward direction of subfolderForProcessorName(): which TONE3000
+    `gears` query value(s) a block's contextual search should use, so
+    searching from inside a Neural Amp block only ever shows amps. Their
+    API accepts multiple gear values underscore-joined in one query
+    (confirmed in their example client), which is why the amp case asks
+    for both "amp" and "amp-cab" at once -- both are valid sources for this
+    block, an amp-only capture or a full amp+cab rig capture. */
+inline juce::String gearFilterForProcessorName (const juce::String& processorName)
+{
+    if (processorName == "Neural Amp")   return "amp_amp-cab";
+    if (processorName == "Neural Pedal") return "pedal";
+    if (processorName == "Cab")          return "cab";
+    if (processorName == "Reverb")       return "space";
+    return {};
 }
 
 } // namespace pedaleira::tone3000routing

@@ -14,10 +14,39 @@ void EffectBlockComponent::setSelected (bool shouldBeSelected)
     repaint();
 }
 
+void EffectBlockComponent::mouseDown (const juce::MouseEvent& event)
+{
+    dragger.startDraggingComponent (this, event);
+    isDragging = false; // only becomes true in mouseDrag, once past a small threshold
+}
+
+void EffectBlockComponent::mouseDrag (const juce::MouseEvent& event)
+{
+    if (! isDragging && event.getDistanceFromDragStart() > 4)
+    {
+        isDragging = true;
+        toFront (true); // stay above sibling blocks while dragging over them
+    }
+
+    if (isDragging)
+    {
+        dragger.dragComponent (this, event, nullptr);
+        setTopLeftPosition (getX(), 0); // horizontal reordering only -- stay on the row
+    }
+}
+
 void EffectBlockComponent::mouseUp (const juce::MouseEvent&)
 {
-    if (onClicked != nullptr)
+    if (isDragging)
+    {
+        isDragging = false;
+        if (onDragEnded != nullptr)
+            onDragEnded (*this);
+    }
+    else if (onClicked != nullptr)
+    {
         onClicked();
+    }
 }
 
 void EffectBlockComponent::paint (juce::Graphics& g)

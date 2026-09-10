@@ -7,45 +7,33 @@
 
 #include <functional>
 #include <memory>
-#include <vector>
 
 namespace pedaleira
 {
 
 /**
-    "Configure the connection" surface for TONE3000: paste your publishable
-    client_id, log in through the browser, search tones, download a model.
-
-    A downloaded model isn't loaded into the audio graph from here -- this
-    panel just reports the file it wrote via onModelDownloaded, and
-    MainComponent decides what to do with it (load into the selected NAM
-    block). Keeps the network layer and the audio graph from knowing about
-    each other at all.
+    TONE3000 account surface: paste your publishable client_id, log in.
+    That's all this does now -- searching and downloading models moved
+    into ParameterPanel itself, contextual to whichever block is selected
+    (a Neural Amp block searches amps, a Cab block searches cabs, etc.),
+    rather than a separate generic dialog you'd have to cross-reference by
+    hand. See GearRouting.h::gearFilterForProcessorName.
 */
-class Tone3000Panel : public juce::Component,
-                       private juce::ListBoxModel
+class Tone3000Panel : public juce::Component
 {
 public:
-    Tone3000Panel (Tone3000Manager& managerToUse, juce::File modelsDirectory);
+    explicit Tone3000Panel (Tone3000Manager& managerToUse);
 
     void resized() override;
     void paint (juce::Graphics& g) override;
 
-    /** gear/format are TONE3000's own enum strings -- see GearRouting.h. */
-    std::function<void (juce::File file, juce::String gear, juce::String format)> onModelDownloaded;
     std::function<void()> onRequestClose;
 
 private:
     void refreshLoginState();
     void doLogin();
-    void doSearch();
-    void doDownloadSelected();
-
-    int getNumRows() override;
-    void paintListBoxItem (int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override;
 
     Tone3000Manager& manager;
-    juce::File modelsDir;
     std::unique_ptr<OAuthLoginDialog> loginDialog;
 
     juce::Label clientIdLabel { {}, "client_id" };
@@ -55,15 +43,7 @@ private:
     juce::TextButton loginButton { "Log in" };
     juce::TextButton logoutButton { "Log out" };
     juce::Label statusLabel;
-
-    juce::TextEditor searchField;
-    juce::ComboBox gearFilterCombo;
-    juce::TextButton searchButton { "Search" };
-    juce::ListBox resultsList { "tones", this };
-    juce::TextButton downloadButton { "Download selected" };
     juce::TextButton closeButton { "Close" };
-
-    std::vector<Tone3000Manager::Tone> results;
 };
 
 } // namespace pedaleira

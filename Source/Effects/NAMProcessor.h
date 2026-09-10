@@ -13,9 +13,10 @@ namespace pedaleira
 
 /**
     Realtime-safe wrapper over NeuralAmpModelerCore (nam::DSP). The same
-    class fills two different chain roles -- an amp position and a "neural
-    drive" position -- the inference engine itself doesn't know or care
-    which; only the trained .nam file loaded into it differs. See
+    class fills two different chain roles -- "Neural Amp" and "Neural
+    Pedal" -- the inference engine itself doesn't know or care which; only
+    the trained .nam file loaded into it differs (a TONE3000 gear=amp/
+    amp-cab capture vs. a gear=pedal capture -- see GearRouting.h). See
     EffectRegistry::registerBuiltInEffects for how the two roles get
     registered under different names.
 
@@ -29,7 +30,7 @@ class NAMProcessor : public EffectProcessor,
                       private juce::Timer
 {
 public:
-    explicit NAMProcessor (juce::String chainRoleName = "NAM Amp");
+    explicit NAMProcessor (juce::String chainRoleName = "Neural Amp");
     ~NAMProcessor() override;
 
     /** Control thread only. Throws nam::NamFileValidationError on a bad/malformed file. */
@@ -59,12 +60,12 @@ public:
     // was constructed as (see the chainRoleName passed in by EffectRegistry).
     juce::Colour getAccentColour() const override
     {
-        return isDriveRole() ? juce::Colour (0xffa8322a) : juce::Colour (0xff2f8f6e);
+        return isPedalRole() ? juce::Colour (0xffa8322a) : juce::Colour (0xff2f8f6e);
     }
     void drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const override;
 
 private:
-    bool isDriveRole() const noexcept { return name.containsIgnoreCase ("Drive"); }
+    bool isPedalRole() const noexcept { return name.containsIgnoreCase ("Pedal"); }
     void timerCallback() override { modelSlot.sweep(); }
 
     juce::String name;
