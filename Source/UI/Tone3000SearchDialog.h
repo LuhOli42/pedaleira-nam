@@ -45,6 +45,14 @@ private:
     juce::String gearFilter;
     juce::File destinationFolder;
 
+    // Bumped on every doSearch() call; a search's async callback only
+    // applies its results if this still matches what it started with --
+    // otherwise a newer search has already started (or the network
+    // returned out of order) and the response is stale. Without this, a
+    // second search could leave the first search's results on screen, or
+    // even have a slow first response overwrite a faster second one.
+    int searchGeneration = 0;
+
     juce::Label titleLabel;
     juce::TextEditor searchField;
     juce::ComboBox architectureBox;

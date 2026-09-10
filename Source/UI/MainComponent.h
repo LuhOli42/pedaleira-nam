@@ -56,6 +56,11 @@ private:
     void showPresetsPanel();
     std::unique_ptr<juce::XmlElement> buildPresetXml() const;
     void applyPresetXml (const juce::XmlElement& xml);
+    /** Saves under `name`, reusing its existing number if `name` is already a
+        saved preset (a resave, not a new slot) or assigning the next free
+        one otherwise. Updates currentPresetName/Number and the top bar either way. */
+    void savePresetAs (const juce::String& name);
+    void updatePresetDisplay();
     static juce::File getModelsDirectory();
     static juce::File getPresetsDirectory();
 
@@ -93,12 +98,20 @@ private:
 
     ParameterPanel parameterPanel;
     PresetManager presets { getPresetsDirectory() };
-    juce::String currentPresetName; // empty = no preset loaded/saved since the last change
+    juce::String currentPresetName;   // empty = no preset loaded/saved since the last change
+    int currentPresetNumber = 0;      // 0 = none yet; a real preset's number is always >= 1
 
-    // Shows the current preset's name once one is loaded/saved -- tapping
-    // it opens PresetListDialog (see showPresetsPanel()).
+    // presetBadge shows the preset NUMBER (e.g. "1") and titleLabel shows
+    // its NAME -- tapping the badge opens PresetListDialog (see
+    // showPresetsPanel()). Once scenes exist (a preset's own internal
+    // variations, e.g. "1A"/"1B"), the badge's text becomes number+letter
+    // in that same slot -- see AGENT.md's UI/UX Design Philosophy -- this
+    // is deliberately not built yet, just planned for.
     juce::TextButton presetBadge { juce::String::fromUTF8 ("\xe2\x80\x94") }; // em dash placeholder
-    juce::Label titleLabel { {}, "Pedaleira NAM" };
+    // Saves the currently loaded preset in place, no dialog -- only visible
+    // once one is actually loaded (see updatePresetDisplay()).
+    juce::TextButton quickSaveButton { "Save" };
+    juce::Label titleLabel { {}, "No preset loaded" };
     juce::Label cpuLabel;
     juce::TextButton settingsButton { juce::String::fromUTF8 ("\xe2\x8b\xae") }; // vertical ellipsis "..."
 

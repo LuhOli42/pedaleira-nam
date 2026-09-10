@@ -139,6 +139,15 @@ meant to think about. Concretely, until Phase 7 replaces this dev GUI:
   despite the filename — it's the app's general Settings screen, TONE3000
   account is just its first section). Don't add a second top-level
   settings surface; add a new section to this one.
+- **Presets have a stable NUMBER, separate from their name** (see
+  `PresetManager::numberForExistingPreset()`/`nextAvailableNumber()`),
+  shown in `presetBadge`; the preset's name is shown in `titleLabel`
+  (replaced "Pedaleira NAM" branding text there, which is not information).
+  A future **scenes** feature (per-preset variations, not built yet) will
+  extend the badge to number+letter — "1A" — matching the Quad Cortex
+  reference exactly; the number alone today is that same slot, just
+  without a letter suffix yet. Don't build UI for scenes ahead of the
+  feature itself.
 
 ## Code conventions
 

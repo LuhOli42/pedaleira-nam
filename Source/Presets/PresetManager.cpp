@@ -43,4 +43,19 @@ bool PresetManager::deletePreset (const juce::String& name) const
     return fileFor (name).deleteFile();
 }
 
+int PresetManager::numberForExistingPreset (const juce::String& name) const
+{
+    if (auto xml = loadPreset (name))
+        return xml->getIntAttribute ("number", 0);
+    return 0;
+}
+
+int PresetManager::nextAvailableNumber() const
+{
+    int highest = 0;
+    for (auto& name : listPresetNames())
+        highest = juce::jmax (highest, numberForExistingPreset (name));
+    return highest + 1;
+}
+
 } // namespace pedaleira

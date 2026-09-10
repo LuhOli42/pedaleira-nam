@@ -35,6 +35,17 @@ public:
 
     bool deletePreset (const juce::String& name) const;
 
+    /** The `number` attribute already stored in an existing preset's saved
+        XML, or 0 if it doesn't exist yet / has none. A preset's number is
+        assigned once (see nextAvailableNumber()) and kept on every
+        re-save -- it's a stable identity, like a numbered slot on a
+        hardware pedalboard, not a position in an alphabetical list. */
+    int numberForExistingPreset (const juce::String& name) const;
+
+    /** One past the highest `number` among all saved presets (1 if there
+        are none yet) -- what a brand new preset should be numbered. */
+    int nextAvailableNumber() const;
+
 private:
     juce::File fileFor (const juce::String& name) const;
 

@@ -57,6 +57,17 @@ void Tone3000SearchDialog::doSearch()
     if (query.isEmpty())
         return;
 
+    ++searchGeneration;
+    const int thisGeneration = searchGeneration;
+
+    // Clear the old results immediately, not just once the new response
+    // arrives -- a second search used to leave the first search's results
+    // sitting on screen for however long the request took, which read as
+    // "the search button doesn't do anything".
+    results.clear();
+    resultsList.updateContent();
+    resultsList.deselectAllRows();
+
     statusLabel.setText ("Searching for \"" + query + "\"...", juce::dontSendNotification);
 
     juce::String architectureFilter;
@@ -69,8 +80,13 @@ void Tone3000SearchDialog::doSearch()
     }
 
     manager.searchTones (query, gearFilter, architectureFilter,
-        [this] (bool success, std::vector<Tone3000Manager::Tone> found, juce::String error)
+        [this, thisGeneration] (bool success, std::vector<Tone3000Manager::Tone> found, juce::String error)
         {
+            // A newer search has started (or this one just arrived out of
+            // order) -- its own callback already owns the screen, or will.
+            if (thisGeneration != searchGeneration)
+                return;
+
             if (! success)
             {
                 statusLabel.setText (error, juce::dontSendNotification);

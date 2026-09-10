@@ -4,6 +4,7 @@
 #include "Tone3000Panel.h"
 
 #include <algorithm>
+#include <map>
 
 namespace pedaleira
 {
@@ -25,6 +26,27 @@ namespace
     // Design Philosophy). More than that scrolls vertically as a fallback,
     // not a wall.
     constexpr int maxVisibleRows = 4;
+
+    // Same categories as the icon reference sheet (see
+    // docs/icons/AGENT-icon-notes.md) -- the "Add effect" menu groups into
+    // these submenus once there are enough effect types that a flat list
+    // stops being manageable. Order here is the order submenus appear in.
+    const juce::StringArray categoryOrder { "Amplificadores", "Dinamica", "Drive", "Modulacao",
+                                             "Delay", "Reverb", "Filtro/FX", "Utilitarios" };
+
+    juce::String categoryForDisplayName (const juce::String& displayName)
+    {
+        if (displayName == "Noise Gate" || displayName == "Compressor")
+            return "Dinamica";
+        if (displayName == "Overdrive")
+            return "Drive";
+        if (displayName == "Neural Amp" || displayName == "Neural Amp + Cab"
+            || displayName == "Neural Pedal" || displayName == "Cab")
+            return "Amplificadores";
+        if (displayName == "Reverb")
+            return "Reverb";
+        return "Other"; // shouldn't normally happen -- a new effect type that hasn't been categorised yet
+    }
 }
 
 MainComponent::MainComponent()
@@ -35,6 +57,9 @@ MainComponent::MainComponent()
     presetBadge.setColour (juce::TextButton::buttonColourId, juce::Colour (0xff1c1c1c));
     presetBadge.setColour (juce::TextButton::textColourOffId, juce::Colours::lightgrey);
     presetBadge.onClick = [this] { showPresetsPanel(); };
+
+    addChildComponent (quickSaveButton); // only shown once a preset is actually loaded -- see updatePresetDisplay()
+    quickSaveButton.onClick = [this] { if (currentPresetName.isNotEmpty()) savePresetAs (currentPresetName); };
 
     addAndMakeVisible (titleLabel);
     titleLabel.setFont (juce::Font (22.0f, juce::Font::bold));
@@ -68,7 +93,7 @@ MainComponent::MainComponent()
     addAndMakeVisible (parameterPanel);
 
     if (! audioEngine.start())
-        titleLabel.setText ("Pedaleira NAM (failed to open audio device)", juce::dontSendNotification);
+        titleLabel.setText ("Audio device failed to open", juce::dontSendNotification);
 
     addAndMakeVisible (inputSelector);
     auto inputNames = audioEngine.getAvailableInputChannelNames();
@@ -237,15 +262,50 @@ void MainComponent::showAddEffectMenu (int insertAtIndex)
 {
     auto keys = registry.getRegisteredNames();
 
+    std::map<juce::String, std::vector<juce::String>> keysByCategory;
+    for (auto& key : keys)
+        keysByCategory[categoryForDisplayName (registry.displayNameForKey (key))].push_back (key);
+
+    // Item IDs are assigned sequentially across every submenu, and idToKey
+    // is that same sequence -- juce::PopupMenu only gives an item's ID
+    // back, never which submenu it came from, so this flat lookup is what
+    // turns that ID back into a registry key.
     juce::PopupMenu menu;
-    for (int i = 0; i < keys.size(); ++i)
-        menu.addItem (i + 1, registry.displayNameForKey (keys[i])); // a human wrote this, not a raw registry key
+    std::vector<juce::String> idToKey;
+
+    auto addCategory = [&] (const juce::String& category)
+    {
+        const auto it = keysByCategory.find (category);
+        if (it == keysByCategory.end())
+            return;
+
+        juce::PopupMenu submenu;
+        for (auto& key : it->second)
+        {
+            idToKey.push_back (key);
+            submenu.addItem ((int) idToKey.size(), registry.displayNameForKey (key));
+        }
+        menu.addSubMenu (category, submenu);
+        keysByCategory.erase (it);
+    };
+
+    for (auto& category : categoryOrder)
+        addCategory (category);
+
+    // Anything left over (e.g. "Other") -- still shown, just last. Collected
+    // into a separate list first: addCategory() erases from keysByCategory,
+    // which can't happen safely while range-for is iterating that same map.
+    juce::StringArray remainingCategories;
+    for (auto& [category, categoryKeys] : keysByCategory)
+        remainingCategories.add (category);
+    for (auto& category : remainingCategories)
+        addCategory (category);
 
     menu.showMenuAsync (juce::PopupMenu::Options(),
-        [this, keys, insertAtIndex] (int result)
+        [this, idToKey, insertAtIndex] (int result)
         {
-            if (result > 0 && result - 1 < keys.size())
-                addEffect (keys[result - 1], insertAtIndex);
+            if (result > 0 && result - 1 < (int) idToKey.size())
+                addEffect (idToKey[(size_t) result - 1], insertAtIndex);
         });
 }
 
@@ -283,9 +343,7 @@ void MainComponent::showPresetsPanel()
 
     dialog->onSaveRequested = [this] (juce::String name)
     {
-        presets.savePreset (name, *buildPresetXml());
-        currentPresetName = name;
-        presetBadge.setButtonText (name);
+        savePresetAs (name);
         overlayHost.popOverlay();
     };
 
@@ -295,7 +353,8 @@ void MainComponent::showPresetsPanel()
         {
             applyPresetXml (*xml);
             currentPresetName = name;
-            presetBadge.setButtonText (name);
+            currentPresetNumber = xml->getIntAttribute ("number", 0);
+            updatePresetDisplay();
         }
         overlayHost.popOverlay();
     };
@@ -306,7 +365,8 @@ void MainComponent::showPresetsPanel()
         if (currentPresetName == name)
         {
             currentPresetName.clear();
-            presetBadge.setButtonText (juce::String::fromUTF8 ("\xe2\x80\x94"));
+            currentPresetNumber = 0;
+            updatePresetDisplay();
         }
         overlayHost.popOverlay();
         showPresetsPanel(); // reopen with a refreshed list -- simplest way to reflect the deletion
@@ -315,6 +375,32 @@ void MainComponent::showPresetsPanel()
     dialog->onPopOverlay = [this] { overlayHost.popOverlay(); };
 
     overlayHost.pushOverlay (std::move (dialog));
+}
+
+void MainComponent::savePresetAs (const juce::String& name)
+{
+    // Reuse the existing number on a resave (same name = same slot, not a
+    // new one) -- see PresetManager::numberForExistingPreset()'s comment.
+    const int existingNumber = presets.numberForExistingPreset (name);
+    const int number = existingNumber > 0 ? existingNumber : presets.nextAvailableNumber();
+
+    auto xml = buildPresetXml();
+    xml->setAttribute ("number", number);
+    presets.savePreset (name, *xml);
+
+    currentPresetName = name;
+    currentPresetNumber = number;
+    updatePresetDisplay();
+}
+
+void MainComponent::updatePresetDisplay()
+{
+    presetBadge.setButtonText (currentPresetNumber > 0 ? juce::String (currentPresetNumber)
+                                                         : juce::String::fromUTF8 ("\xe2\x80\x94"));
+    titleLabel.setText (currentPresetName.isNotEmpty() ? currentPresetName : "No preset loaded",
+                         juce::dontSendNotification);
+    quickSaveButton.setVisible (currentPresetName.isNotEmpty());
+    resized(); // quickSaveButton's visibility changes how much room titleLabel gets
 }
 
 std::unique_ptr<juce::XmlElement> MainComponent::buildPresetXml() const
@@ -413,6 +499,11 @@ void MainComponent::resized()
     top.removeFromRight (8);
     presetBadge.setBounds (top.removeFromLeft (44));
     top.removeFromLeft (8);
+    if (quickSaveButton.isVisible())
+    {
+        quickSaveButton.setBounds (top.removeFromRight (70));
+        top.removeFromRight (8);
+    }
     titleLabel.setBounds (top);
 
     area.removeFromTop (8);
