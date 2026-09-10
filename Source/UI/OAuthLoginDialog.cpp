@@ -1,5 +1,7 @@
 #include "OAuthLoginDialog.h"
 
+#include "TouchSizing.h"
+
 #include <juce_events/juce_events.h>
 
 namespace pedaleira
@@ -53,7 +55,7 @@ void OAuthLoginDialog::resized()
 {
     auto area = getLocalBounds().reduced (10);
 
-    auto top = area.removeFromTop (28);
+    auto top = area.removeFromTop (touch::minTapTarget);
     cancelButton.setBounds (top.removeFromRight (80));
     titleLabel.setBounds (top);
 

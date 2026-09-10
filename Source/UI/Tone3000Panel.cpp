@@ -1,5 +1,7 @@
 #include "Tone3000Panel.h"
 
+#include "TouchSizing.h"
+
 namespace pedaleira
 {
 
@@ -120,21 +122,21 @@ void Tone3000Panel::resized()
     tone3000SectionLabel.setBounds (area.removeFromTop (20));
     area.removeFromTop (6);
 
-    auto keyRow = area.removeFromTop (28);
+    auto keyRow = area.removeFromTop (touch::minTapTarget);
     clientIdLabel.setBounds (keyRow.removeFromLeft (70));
     saveClientIdButton.setBounds (keyRow.removeFromRight (90));
     clientIdField.setBounds (keyRow.reduced (4, 0));
 
     area.removeFromTop (8);
 
-    auto loginRow = area.removeFromTop (28);
+    auto loginRow = area.removeFromTop (touch::minTapTarget);
     loginButton.setBounds (loginRow.removeFromLeft (110));
     logoutButton.setBounds (loginRow.getX(), loginRow.getY(), 110, loginRow.getHeight());
 
     area.removeFromTop (10);
     statusLabel.setBounds (area.removeFromTop (44));
 
-    closeButton.setBounds (area.removeFromBottom (34).removeFromRight (100));
+    closeButton.setBounds (area.removeFromBottom (touch::minTapTarget).removeFromRight (100));
 }
 
 void Tone3000Panel::paint (juce::Graphics& g)

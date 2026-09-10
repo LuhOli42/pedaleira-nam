@@ -1,5 +1,7 @@
 #include "ModelListDialog.h"
 
+#include "TouchSizing.h"
+
 namespace pedaleira
 {
 
@@ -15,7 +17,7 @@ ModelListDialog::ModelListDialog (juce::String titleText, juce::Array<juce::File
 
     addAndMakeVisible (listBox);
     listBox.setColour (juce::ListBox::backgroundColourId, juce::Colour (0xff141414));
-    listBox.setRowHeight (44);
+    listBox.setRowHeight (touch::minTapTarget);
     listBox.setVisible (! files.isEmpty());
 
     addAndMakeVisible (emptyStateLabel);
@@ -84,7 +86,7 @@ void ModelListDialog::resized()
     titleLabel.setBounds (area.removeFromTop (24));
     area.removeFromTop (8);
 
-    auto bottomRow = area.removeFromBottom (34);
+    auto bottomRow = area.removeFromBottom (touch::minTapTarget);
     closeButton.setBounds (bottomRow.removeFromRight (90));
     bottomRow.removeFromRight (8);
     importButton.setBounds (bottomRow);

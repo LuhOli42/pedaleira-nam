@@ -2,6 +2,7 @@
 
 #include "PresetListDialog.h"
 #include "Tone3000Panel.h"
+#include "TouchSizing.h"
 
 #include <algorithm>
 #include <map>
@@ -301,7 +302,9 @@ void MainComponent::showAddEffectMenu (int insertAtIndex)
     for (auto& category : remainingCategories)
         addCategory (category);
 
-    menu.showMenuAsync (juce::PopupMenu::Options(),
+    // Big is fine -- comfortable to tap on a 10" touchscreen matters more
+    // than compactness (see AGENT.md's UI/UX Design Philosophy).
+    menu.showMenuAsync (juce::PopupMenu::Options().withStandardItemHeight (touch::minTapTarget),
         [this, idToKey, insertAtIndex] (int result)
         {
             if (result > 0 && result - 1 < (int) idToKey.size())
@@ -493,11 +496,13 @@ void MainComponent::resized()
 
     auto area = getLocalBounds().reduced (12);
 
-    auto top = area.removeFromTop (32);
+    // At least touch::minTapTarget tall -- settingsButton and presetBadge
+    // are tap targets, not just labels, same rule as everything else.
+    auto top = area.removeFromTop (touch::minTapTarget);
     cpuLabel.setBounds (top.removeFromRight (70));
-    settingsButton.setBounds (top.removeFromRight (36));
+    settingsButton.setBounds (top.removeFromRight (touch::minTapTarget));
     top.removeFromRight (8);
-    presetBadge.setBounds (top.removeFromLeft (44));
+    presetBadge.setBounds (top.removeFromLeft (touch::minTapTarget + 8));
     top.removeFromLeft (8);
     if (quickSaveButton.isVisible())
     {
@@ -534,7 +539,7 @@ void MainComponent::resized()
     int panelHeight = 0;
     if (selectedProcessor != nullptr)
     {
-        constexpr int floorForOneKnobRow = 220; // header rows + exactly one row of knobs
+        constexpr int floorForOneKnobRow = 260; // header rows (now touch::minTapTarget-tall) + exactly one row of knobs
         const int cap = juce::jmax ((int) (getHeight() * 0.25f), floorForOneKnobRow);
         const int preferred = parameterPanel.getPreferredContentHeight (area.getWidth());
         panelHeight = juce::jmin (area.getHeight(), juce::jmin (preferred, cap));

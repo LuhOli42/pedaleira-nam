@@ -1,5 +1,6 @@
 #include "Tone3000SearchDialog.h"
 
+#include "TouchSizing.h"
 #include "../Tone3000/GearRouting.h"
 
 namespace pedaleira
@@ -33,6 +34,7 @@ Tone3000SearchDialog::Tone3000SearchDialog (Tone3000Manager& managerToUse, juce:
 
     addAndMakeVisible (resultsList);
     resultsList.setColour (juce::ListBox::backgroundColourId, juce::Colour (0xff161616));
+    resultsList.setRowHeight (touch::minTapTarget);
 
     addAndMakeVisible (downloadButton);
     downloadButton.onClick = [this] { doDownloadSelected(); };
@@ -180,7 +182,7 @@ void Tone3000SearchDialog::resized()
     titleLabel.setBounds (area.removeFromTop (24));
     area.removeFromTop (6);
 
-    auto searchRow = area.removeFromTop (28);
+    auto searchRow = area.removeFromTop (touch::minTapTarget);
     searchButton.setBounds (searchRow.removeFromRight (90));
     searchRow.removeFromRight (6);
     architectureBox.setBounds (searchRow.removeFromRight (150));
@@ -191,7 +193,7 @@ void Tone3000SearchDialog::resized()
     statusLabel.setBounds (area.removeFromTop (20));
     area.removeFromTop (6);
 
-    auto bottomRow = area.removeFromBottom (30);
+    auto bottomRow = area.removeFromBottom (touch::minTapTarget);
     closeButton.setBounds (bottomRow.removeFromRight (90));
     bottomRow.removeFromRight (8);
     downloadButton.setBounds (bottomRow.removeFromRight (170));

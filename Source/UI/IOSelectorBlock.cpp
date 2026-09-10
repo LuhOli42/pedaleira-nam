@@ -1,5 +1,7 @@
 #include "IOSelectorBlock.h"
 
+#include "TouchSizing.h"
+
 namespace pedaleira
 {
 
@@ -24,7 +26,7 @@ void IOSelectorBlock::mouseUp (const juce::MouseEvent&)
     for (int i = 0; i < options.size(); ++i)
         menu.addItem (i + 1, options[i]);
 
-    menu.showMenuAsync (juce::PopupMenu::Options(),
+    menu.showMenuAsync (juce::PopupMenu::Options().withStandardItemHeight (touch::minTapTarget),
         [this] (int result)
         {
             if (result > 0 && onSelectionChanged)

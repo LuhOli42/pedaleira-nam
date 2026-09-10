@@ -1,5 +1,7 @@
 #include "PresetListDialog.h"
 
+#include "TouchSizing.h"
+
 namespace pedaleira
 {
 
@@ -24,7 +26,7 @@ PresetListDialog::PresetListDialog (juce::StringArray existingNames)
 
     addAndMakeVisible (listBox);
     listBox.setColour (juce::ListBox::backgroundColourId, juce::Colour (0xff141414));
-    listBox.setRowHeight (44);
+    listBox.setRowHeight (touch::minTapTarget);
     listBox.setVisible (! names.isEmpty());
 
     addAndMakeVisible (emptyStateLabel);
@@ -80,14 +82,14 @@ void PresetListDialog::resized()
     titleLabel.setBounds (area.removeFromTop (24));
     area.removeFromTop (8);
 
-    auto saveRow = area.removeFromTop (28);
+    auto saveRow = area.removeFromTop (touch::minTapTarget);
     saveButton.setBounds (saveRow.removeFromRight (120));
     saveRow.removeFromRight (6);
     nameField.setBounds (saveRow);
 
     area.removeFromTop (8);
 
-    auto bottomRow = area.removeFromBottom (34);
+    auto bottomRow = area.removeFromBottom (touch::minTapTarget);
     closeButton.setBounds (bottomRow.removeFromRight (90));
     bottomRow.removeFromRight (8);
     deleteButton.setBounds (bottomRow.removeFromRight (90));

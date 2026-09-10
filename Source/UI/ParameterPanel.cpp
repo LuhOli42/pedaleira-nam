@@ -2,6 +2,7 @@
 
 #include "ModelListDialog.h"
 #include "Tone3000SearchDialog.h"
+#include "TouchSizing.h"
 #include "../Tone3000/GearRouting.h"
 
 namespace pedaleira
@@ -208,12 +209,12 @@ int ParameterPanel::getPreferredContentHeight (int availableWidth) const
 
     // Mirrors resized()'s own layout math -- see its comments for what each
     // number is.
-    int height = 20; // getLocalBounds().reduced (10) -- top + bottom
-    height += 28;     // title/bypass/remove row
-    height += 20;     // status label
+    int height = 20;                    // getLocalBounds().reduced (10) -- top + bottom
+    height += touch::minTapTarget;      // title/bypass/remove row
+    height += 20;                       // status label
     if (browseInstalledButton.isVisible() || searchTone3000Button.isVisible())
-        height += 28; // browse/search row
-    height += 8;      // gap before the knob grid
+        height += touch::minTapTarget;  // browse/search row
+    height += 8;                        // gap before the knob grid
 
     constexpr int cellWidth = 92;
     constexpr int cellHeight = 106;
@@ -229,7 +230,7 @@ void ParameterPanel::resized()
 {
     auto area = getLocalBounds().reduced (10);
 
-    auto top = area.removeFromTop (28);
+    auto top = area.removeFromTop (touch::minTapTarget);
     removeButton.setBounds (top.removeFromRight (80));
     bypassToggle.setBounds (top.removeFromRight (110));
     titleLabel.setBounds (top);
@@ -238,7 +239,7 @@ void ParameterPanel::resized()
 
     if (browseInstalledButton.isVisible() || searchTone3000Button.isVisible())
     {
-        auto fileRow = area.removeFromTop (28);
+        auto fileRow = area.removeFromTop (touch::minTapTarget);
         if (searchTone3000Button.isVisible())
             searchTone3000Button.setBounds (fileRow.removeFromRight (170));
         if (browseInstalledButton.isVisible())

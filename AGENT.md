@@ -79,6 +79,20 @@ Update this table when a phase is completed — don't let it silently go stale.
 
 ## UI/UX Design Philosophy (don't reopen without a new reason)
 
+**Everything interactive has to work on a real touchscreen, not just a
+mouse.** The final target is a ~10" touch panel operated with a fingertip
+(fingers or a pick-holding hand near the strings, not a stylus) — this
+governs every button/menu/list/knob size decision from Phase 1 onward, not
+just the final touch UI (Phase 7). `Source/UI/TouchSizing.h` defines
+`touch::minTapTarget` (48px) — never size a tappable element below that on
+either axis, and don't hesitate to make something bigger than a desktop app
+would ("pode ser um menu grande" — it's fine for a menu to be big). This
+applies to `juce::PopupMenu` rows (`PopupMenu::Options().withStandardItemHeight
+(touch::minTapTarget)`), `juce::ListBox` rows (`setRowHeight`), and every
+button-holding layout row, not just whatever prompted adding the constant.
+When you lay out a new interactive row, use `touch::minTapTarget` from the
+start rather than an arbitrary desktop-sized number that'll need revisiting.
+
 This is a standalone hardware pedalboard, not a desktop app that happens to
 run on a PC first. Every screen has to make sense on a browserless
 touchscreen with no window manager and no filesystem the player is ever
