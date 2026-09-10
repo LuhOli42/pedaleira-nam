@@ -66,14 +66,23 @@ void GateProcessor::process (juce::AudioBuffer<float>& buffer)
 
 void GateProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
-    // A plus/cross -- see docs/icons/AGENT-icon-notes.md: this is the
-    // unified icon set's "Noise Gate" glyph (Dinamica category).
-    g.setColour (juce::Colours::white);
+    // A horizontal line with a small square pulse in the middle (rise,
+    // flat top, fall) -- not a plain cross, corrected per user feedback --
+    // see docs/icons/AGENT-icon-notes.md: this is the unified icon set's
+    // "Noise Gate" glyph (Dinamica category), the gate opening then closing.
+    const float midY = b.getCentreY();
+    const float pulseTop = b.getY() + b.getHeight() * 0.15f;
 
-    const float armLength = juce::jmin (b.getWidth(), b.getHeight()) * 0.42f;
-    const auto c = b.getCentre();
-    g.drawLine (c.x - armLength, c.y, c.x + armLength, c.y, 2.5f);
-    g.drawLine (c.x, c.y - armLength, c.x, c.y + armLength, 2.5f);
+    juce::Path p;
+    p.startNewSubPath (b.getX(), midY);
+    p.lineTo (b.getX() + b.getWidth() * 0.32f, midY);
+    p.lineTo (b.getX() + b.getWidth() * 0.32f, pulseTop);
+    p.lineTo (b.getX() + b.getWidth() * 0.68f, pulseTop);
+    p.lineTo (b.getX() + b.getWidth() * 0.68f, midY);
+    p.lineTo (b.getRight(), midY);
+
+    g.setColour (juce::Colours::white);
+    g.strokePath (p, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
 
 } // namespace pedaleira
