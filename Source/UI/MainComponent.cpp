@@ -9,9 +9,21 @@ namespace pedaleira
 
 namespace
 {
-    constexpr int blockWidth = 130;
-    constexpr int blockHeight = 90;
-    constexpr int blockGap = 10;
+    constexpr int blockWidth = 110;
+    constexpr int blockHeight = 78;
+    constexpr int blockGap = 8;
+
+    // I/O selectors are a fraction of a block's footprint -- they hold two
+    // short lines of text, not an icon, and don't need a block-sized tile.
+    constexpr int ioWidth = 56;
+    constexpr int ioHeight = 50;
+
+    // The chain wraps into rows instead of scrolling sideways once it fills
+    // the available width -- up to this many visible at once, matching the
+    // Quad Cortex Grid reference's fixed 4-row layout (see AGENT.md's UI/UX
+    // Design Philosophy). More than that scrolls vertically as a fallback,
+    // not a wall.
+    constexpr int maxVisibleRows = 4;
 }
 
 MainComponent::MainComponent()
@@ -37,20 +49,16 @@ MainComponent::MainComponent()
     // get pushed/popped (see AGENT.md's UI/UX Design Philosophy).
     addChildComponent (overlayHost);
 
+    // Wraps into rows instead of growing sideways now (see layoutChain()),
+    // so it's the vertical scrollbar that's the overflow fallback.
     chainViewport.setViewedComponent (&chainContainer, false);
-    chainViewport.setScrollBarsShown (false, true);
+    chainViewport.setScrollBarsShown (true, false);
     addAndMakeVisible (chainViewport);
 
     chainContainer.addAndMakeVisible (addButton);
     addButton.onClick = [this] { showAddEffectMenu(); }; // append at the end
 
-    chainContainer.onLineClicked = [this] (int clickX)
-    {
-        // Which slot the click landed in, translated to an insertion index:
-        // a click in the gap between block k-1 and block k inserts at k.
-        const int index = juce::jlimit (0, blocks.size(), clickX / (blockWidth + blockGap));
-        showAddEffectMenu (index);
-    };
+    chainContainer.onSlotClicked = [this] (int index) { showAddEffectMenu (index); };
 
     parameterPanel.onRemoveRequested = [this] (EffectProcessor* p) { removeEffect (p); };
     parameterPanel.setModelsDirectory (getModelsDirectory());
@@ -77,7 +85,7 @@ MainComponent::MainComponent()
     outputSelector.onSelectionChanged = [this] (int index) { audioEngine.setOutputChannelPair (index * 2); };
 
     layoutChain();
-    setSize (960, 560);
+    setSize (1000, 640); // tall enough for 4 chain rows plus the parameter drawer without clipping
     startTimer (200);
 }
 
@@ -98,7 +106,9 @@ void MainComponent::addEffect (const juce::String& registryName, int insertAtInd
     chain.insert (chain.begin() + index, std::move (processor));
 
     auto block = std::make_unique<EffectBlockComponent> (*raw);
-    block->onClicked = [this, raw] { selectBlock (raw); };
+    // Tapping the already-open block closes the drawer instead of just
+    // re-opening it on itself -- same block, second tap, gone.
+    block->onClicked = [this, raw] { selectBlock (selectedProcessor == raw ? nullptr : raw); };
     block->onDragEnded = [this] (EffectBlockComponent& b) { handleBlockDragEnded (b); };
     chainContainer.addAndMakeVisible (*block);
     blocks.insert (index, block.release());
@@ -157,19 +167,33 @@ void MainComponent::rebuildSignalGraph()
 
 void MainComponent::layoutChain()
 {
-    int x = 0;
+    // Wraps into rows once it fills the available width, instead of
+    // growing sideways forever -- see AGENT.md's UI/UX Design Philosophy
+    // (the Quad Cortex Grid reference this is modelled on is a fixed grid,
+    // not a horizontally-scrolling strip).
+    const int viewportWidth = juce::jmax (blockWidth, chainViewport.getWidth());
+    chainColumns = juce::jmax (1, (viewportWidth + blockGap) / (blockWidth + blockGap));
+
     std::vector<juce::Rectangle<float>> bounds;
+    int index = 0;
 
     for (auto* block : blocks)
     {
-        block->setBounds (x, 0, blockWidth, blockHeight);
+        const int row = index / chainColumns;
+        const int col = index % chainColumns;
+        block->setBounds (col * (blockWidth + blockGap), row * (blockHeight + blockGap), blockWidth, blockHeight);
         bounds.emplace_back (block->getBounds().toFloat());
-        x += blockWidth + blockGap;
+        ++index;
     }
-    addButton.setBounds (x, 0, blockWidth, blockHeight);
-    x += blockWidth;
 
-    chainContainer.setSize (juce::jmax (x, chainViewport.getWidth()), blockHeight);
+    const int addRow = index / chainColumns;
+    const int addCol = index % chainColumns;
+    addButton.setBounds (addCol * (blockWidth + blockGap), addRow * (blockHeight + blockGap), blockWidth, blockHeight);
+    ++index;
+
+    const int totalRows = juce::jmax (1, (index + chainColumns - 1) / chainColumns);
+    chainContainer.setSize (viewportWidth, totalRows * (blockHeight + blockGap) - blockGap);
+    chainContainer.setRowMetrics (chainColumns, blockWidth, blockHeight, blockGap);
     chainContainer.setBlockBounds (std::move (bounds));
 }
 
@@ -182,9 +206,13 @@ void MainComponent::handleBlockDragEnded (EffectBlockComponent& blockComp)
         return;
     }
 
-    // Where it was dropped, translated back into a slot index on the clean grid.
-    const int centreX = blockComp.getBounds().getCentreX();
-    const int newIndex = juce::jlimit (0, blocks.size() - 1, centreX / (blockWidth + blockGap));
+    // Where it was dropped, translated back into a slot index on the clean
+    // grid -- row from Y now that dragging isn't locked to one row anymore,
+    // column from X, same as layoutChain()'s own row/col math.
+    const auto centre = blockComp.getBounds().getCentre();
+    const int row = juce::jmax (0, centre.y / (blockHeight + blockGap));
+    const int col = juce::jlimit (0, chainColumns - 1, centre.x / (blockWidth + blockGap));
+    const int newIndex = juce::jlimit (0, blocks.size() - 1, row * chainColumns + col);
 
     if (newIndex != oldIndex)
     {
@@ -270,22 +298,38 @@ void MainComponent::resized()
     titleLabel.setBounds (top);
 
     area.removeFromTop (8);
-    auto chainRow = area.removeFromTop (blockHeight + 12);
-    inputSelector.setBounds (chainRow.removeFromLeft (blockWidth).withHeight (blockHeight));
+
+    // Reserves exactly maxVisibleRows worth of height, like the Quad Cortex
+    // Grid reference's fixed grid -- not "one row plus however much the
+    // content happens to need".
+    const int chainRowsHeight = maxVisibleRows * blockHeight + (maxVisibleRows - 1) * blockGap;
+    auto chainRow = area.removeFromTop (chainRowsHeight + 12);
+
+    inputSelector.setBounds (chainRow.removeFromLeft (ioWidth).withSizeKeepingCentre (ioWidth, ioHeight));
     chainRow.removeFromLeft (8);
-    outputSelector.setBounds (chainRow.removeFromRight (blockWidth).withHeight (blockHeight));
+    outputSelector.setBounds (chainRow.removeFromRight (ioWidth).withSizeKeepingCentre (ioWidth, ioHeight));
     chainRow.removeFromRight (8);
     chainViewport.setBounds (chainRow);
     layoutChain();
 
     area.removeFromTop (8);
 
-    // The detail drawer only exists once a block is selected, and even
-    // then it's capped at a quarter of the window -- this used to fill all
-    // remaining space like a desktop utility panel, which is exactly what
-    // AGENT.md's UI/UX Design Philosophy says a pedalboard shouldn't do.
-    const int maxPanelHeight = (int) (getHeight() * 0.25f);
-    const int panelHeight = selectedProcessor != nullptr ? juce::jmin (area.getHeight(), maxPanelHeight) : 0;
+    // The detail drawer only exists once a block is selected. Its height
+    // fits whatever the current processor actually needs (so a 1-2 knob
+    // pedal never scrolls), floored at enough for one knob row and capped
+    // at a quarter of the window -- it used to just always fill a quarter
+    // of the window regardless of content, which either clipped a
+    // knob-heavy processor or left a tiny 1-2 knob one scrolling for no
+    // reason. See AGENT.md's UI/UX Design Philosophy: this is a drawer,
+    // never a permanent desktop-style panel.
+    int panelHeight = 0;
+    if (selectedProcessor != nullptr)
+    {
+        constexpr int floorForOneKnobRow = 220; // header rows + exactly one row of knobs
+        const int cap = juce::jmax ((int) (getHeight() * 0.25f), floorForOneKnobRow);
+        const int preferred = parameterPanel.getPreferredContentHeight (area.getWidth());
+        panelHeight = juce::jmin (area.getHeight(), juce::jmin (preferred, cap));
+    }
     parameterPanel.setBounds (area.removeFromBottom (panelHeight));
     parameterPanel.setVisible (panelHeight > 0);
 }

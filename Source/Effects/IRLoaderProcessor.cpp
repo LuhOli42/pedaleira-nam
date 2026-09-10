@@ -1,5 +1,7 @@
 #include "IRLoaderProcessor.h"
 
+#include <cmath>
+
 namespace pedaleira
 {
 
@@ -111,28 +113,46 @@ juce::Colour IRLoaderProcessor::getAccentColour() const
 
 void IRLoaderProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
+    // See docs/icons/AGENT-icon-notes.md for the unified icon set this
+    // follows.
     g.setColour (juce::Colours::white);
 
     if (isReverbRole())
     {
-        // Concentric arcs spreading outward -- a space, reflecting sound.
+        // Concentric rings -- the set's "Ambient" reverb glyph, the closest
+        // generic match while this role covers every IR-based space in one
+        // block (Hall/Plate/Room/... aren't separate blocks yet).
         for (int i = 0; i < 3; ++i)
         {
-            const float inset = b.getWidth() * (0.1f + 0.22f * (float) i);
-            juce::Path arc;
-            arc.addCentredArc (b.getCentreX(), b.getBottom(), b.getWidth() * 0.5f - inset,
-                                b.getWidth() * 0.5f - inset, 0.0f,
-                                juce::MathConstants<float>::pi, juce::MathConstants<float>::pi * 2.0f, true);
-            g.strokePath (arc, juce::PathStrokeType (2.0f));
+            const float inset = juce::jmin (b.getWidth(), b.getHeight()) * (0.08f + 0.16f * (float) i);
+            g.drawEllipse (b.reduced (inset), 1.8f);
         }
+        g.fillEllipse (b.getCentreX() - 2.5f, b.getCentreY() - 2.5f, 5.0f, 5.0f);
     }
     else
     {
-        // A speaker cabinet: a rounded box with a cone circle -- distinct
-        // from NAMProcessor's amp-role speaker (which has no box around it).
-        auto box = b.reduced (b.getWidth() * 0.08f, 0.0f);
-        g.drawRoundedRectangle (box, 3.0f, 2.0f);
-        g.drawEllipse (box.reduced (box.getWidth() * 0.28f), 2.0f);
+        // An isometric cube -- the set's "Cab" glyph.
+        const auto c = b.getCentre();
+        const float s = juce::jmin (b.getWidth(), b.getHeight()) * 0.42f;
+
+        juce::Point<float> pts[6];
+        for (int i = 0; i < 6; ++i)
+        {
+            const float angle = juce::MathConstants<float>::pi * (-0.5f + (float) i / 3.0f);
+            pts[i] = { c.x + s * std::cos (angle), c.y + s * std::sin (angle) };
+        }
+
+        juce::Path cube;
+        cube.startNewSubPath (pts[0]);
+        for (int i = 1; i < 6; ++i)
+            cube.lineTo (pts[i]);
+        cube.closeSubPath();
+
+        cube.startNewSubPath (c); cube.lineTo (pts[0]);
+        cube.startNewSubPath (c); cube.lineTo (pts[2]);
+        cube.startNewSubPath (c); cube.lineTo (pts[4]);
+
+        g.strokePath (cube, juce::PathStrokeType (1.6f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     }
 }
 

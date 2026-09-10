@@ -9,10 +9,23 @@ void ChainContainer::setBlockBounds (std::vector<juce::Rectangle<float>> bounds)
     repaint();
 }
 
+void ChainContainer::setRowMetrics (int columnsIn, int blockWidthIn, int blockHeightIn, int gapIn)
+{
+    columns = juce::jmax (1, columnsIn);
+    gridBlockWidth = juce::jmax (1, blockWidthIn);
+    gridBlockHeight = juce::jmax (1, blockHeightIn);
+    gridGap = gapIn;
+}
+
 void ChainContainer::mouseUp (const juce::MouseEvent& event)
 {
-    if (onLineClicked)
-        onLineClicked (event.x);
+    if (! onSlotClicked)
+        return;
+
+    const int row = event.y / (gridBlockHeight + gridGap);
+    const int col = juce::jlimit (0, columns - 1, event.x / (gridBlockWidth + gridGap));
+    const int index = juce::jlimit (0, (int) blockBounds.size(), row * columns + col);
+    onSlotClicked (index);
 }
 
 void ChainContainer::paint (juce::Graphics& g)
@@ -20,10 +33,17 @@ void ChainContainer::paint (juce::Graphics& g)
     // The signal path, always on screen -- not just gaps between blocks.
     // A plain Component's paint() runs before its children's, so this sits
     // behind the blocks and the "+" tile for free; they visually sit ON it,
-    // matching the reference UI's always-visible input-to-output line.
-    const float y = (float) getHeight() * 0.5f;
+    // matching the reference UI's always-visible input-to-output line. One
+    // per row now that the chain wraps instead of scrolling sideways.
+    const int totalSlots = (int) blockBounds.size() + 1; // + the "+" tile
+    const int numRows = juce::jmax (1, (totalSlots + columns - 1) / columns);
+
     g.setColour (juce::Colours::white.withAlpha (0.3f));
-    g.drawLine (0.0f, y, (float) getWidth(), y, 2.0f);
+    for (int row = 0; row < numRows; ++row)
+    {
+        const float y = row * (float) (gridBlockHeight + gridGap) + (float) gridBlockHeight * 0.5f;
+        g.drawLine (0.0f, y, (float) getWidth(), y, 2.0f);
+    }
 }
 
 AddBlockButton::AddBlockButton() : juce::Button ("addBlock")

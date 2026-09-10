@@ -79,18 +79,20 @@ void CompressorProcessor::process (juce::AudioBuffer<float>& buffer)
 
 void CompressorProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
-    // Three fader-style handles at different heights -- gain reduction, visually.
-    g.setColour (juce::Colours::white);
-    const float xs[3] = { 0.25f, 0.5f, 0.75f };
-    const float heights[3] = { 0.75f, 0.4f, 0.6f };
+    // A heartbeat/ECG pulse -- see docs/icons/AGENT-icon-notes.md: this is
+    // the unified icon set's "Compressor" glyph (Dinamica category).
+    const float midY = b.getCentreY();
 
-    for (int i = 0; i < 3; ++i)
-    {
-        const float x = b.getX() + b.getWidth() * xs[i];
-        const float topY = b.getBottom() - b.getHeight() * heights[i];
-        g.drawLine (x, b.getBottom(), x, topY, 2.0f);
-        g.fillEllipse (x - 3.5f, topY - 3.5f, 7.0f, 7.0f);
-    }
+    juce::Path p;
+    p.startNewSubPath (b.getX(), midY);
+    p.lineTo (b.getX() + b.getWidth() * 0.28f, midY);
+    p.lineTo (b.getX() + b.getWidth() * 0.38f, b.getY());
+    p.lineTo (b.getX() + b.getWidth() * 0.5f, b.getBottom());
+    p.lineTo (b.getX() + b.getWidth() * 0.62f, midY);
+    p.lineTo (b.getRight(), midY);
+
+    g.setColour (juce::Colours::white);
+    g.strokePath (p, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
 
 } // namespace pedaleira

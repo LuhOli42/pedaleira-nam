@@ -66,18 +66,14 @@ void GateProcessor::process (juce::AudioBuffer<float>& buffer)
 
 void GateProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
-    // A closed-then-open step, reading left to right -- what a gate does.
-    juce::Path p;
-    p.startNewSubPath (b.getX(), b.getBottom());
-    p.lineTo (b.getX(), b.getCentreY());
-    p.lineTo (b.getCentreX() - b.getWidth() * 0.1f, b.getCentreY());
-    p.lineTo (b.getCentreX() - b.getWidth() * 0.1f, b.getY());
-    p.lineTo (b.getCentreX() + b.getWidth() * 0.1f, b.getY());
-    p.lineTo (b.getCentreX() + b.getWidth() * 0.1f, b.getCentreY());
-    p.lineTo (b.getRight(), b.getCentreY());
-
+    // A plus/cross -- see docs/icons/AGENT-icon-notes.md: this is the
+    // unified icon set's "Noise Gate" glyph (Dinamica category).
     g.setColour (juce::Colours::white);
-    g.strokePath (p, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+
+    const float armLength = juce::jmin (b.getWidth(), b.getHeight()) * 0.42f;
+    const auto c = b.getCentre();
+    g.drawLine (c.x - armLength, c.y, c.x + armLength, c.y, 2.5f);
+    g.drawLine (c.x, c.y - armLength, c.x, c.y + armLength, 2.5f);
 }
 
 } // namespace pedaleira

@@ -29,10 +29,7 @@ void EffectBlockComponent::mouseDrag (const juce::MouseEvent& event)
     }
 
     if (isDragging)
-    {
-        dragger.dragComponent (this, event, nullptr);
-        setTopLeftPosition (getX(), 0); // horizontal reordering only -- stay on the row
-    }
+        dragger.dragComponent (this, event, nullptr); // free 2D movement -- the chain now wraps into rows
 }
 
 void EffectBlockComponent::mouseUp (const juce::MouseEvent&)

@@ -108,6 +108,11 @@ meant to think about. Concretely, until Phase 7 replaces this dev GUI:
   whatever space is left like a desktop inspector panel. With nothing
   selected it renders nothing at all — no title, no hint text, just the
   flat background.
+- **Effect icons follow one unified reference set, not ad-hoc glyphs per
+  effect.** See `docs/icons/AGENT-icon-notes.md` for the categories,
+  colours, and which glyph each existing processor's `drawIcon()` uses --
+  read it before adding any new effect class's icon, and add a row there
+  once you do.
 - **Effect blocks are black by default with a strong outline in the
   block's own category colour** (`EffectProcessor::getAccentColour()`),
   not a solid colour fill — see `EffectBlockComponent::paint()`. The one

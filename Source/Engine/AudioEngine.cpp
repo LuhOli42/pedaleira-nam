@@ -3,6 +3,23 @@
 namespace pedaleira
 {
 
+namespace
+{
+    // A defensive ceiling, not a real one: on this dev machine, PipeWire
+    // already holds the real audio interface open exclusively (confirmed
+    // live -- see AGENT.md), so JUCE's ALSA backend can only reach it
+    // through PipeWire's own generic ALSA passthrough device, which
+    // advertises a placeholder 128-channel capability regardless of what
+    // hardware is actually behind it (the interface used for that
+    // confirmation only has 6 real channels each way). Actual audio
+    // routing is unaffected either way (AudioEngine only ever opens 1
+    // input / 2 outputs, see start()) -- this only stops the I/O selector
+    // UI from listing channels nothing will ever really have. A real ALSA
+    // target with no PipeWire in front of it (e.g. the final embedded
+    // build) should never hit this ceiling in the first place.
+    constexpr int maxSaneChannelCount = 16;
+}
+
 AudioEngine::AudioEngine() = default;
 
 AudioEngine::~AudioEngine()
@@ -12,8 +29,6 @@ AudioEngine::~AudioEngine()
 
 bool AudioEngine::start()
 {
-    // 1 input (guitar, mono) / 2 outputs (stereo) -- adjustable once a real
-    // audio interface replaces the PC's default device.
     const auto err = deviceManager.initialiseWithDefaultDevices (1, 2);
 
     if (err.isNotEmpty())
@@ -21,6 +36,83 @@ bool AudioEngine::start()
         juce::Logger::writeToLog ("AudioEngine: failed to open device -- " + err);
         return false;
     }
+
+    // JUCE's ALSA backend defaults to whatever the system calls "default",
+    // which on a PipeWire desktop is PipeWire's own generic ALSA
+    // passthrough ("Default ALSA Output", "Default Audio Device",
+    // "PipeWire Sound Server") -- confirmed live (see AGENT.md) to report a
+    // placeholder 128 input / 128 output channels on a machine whose real
+    // interface only has 6 of each. That's exactly what made every I/O
+    // selector look like it had "infinite" channels: it was listing that
+    // placeholder device's channels, not the real interface's.
+    //
+    // Switch to whichever currently-connected device looks like a real USB
+    // audio interface instead -- picked live every time this runs off
+    // whatever's actually plugged in right now, never a name hardcoded for
+    // one machine (there is no reliable "real interface" heuristic beyond
+    // this; a proper device-picker in Settings is future work, not needed
+    // while there's normally exactly one interface plugged in). This starts
+    // from the setup that just successfully opened above and only redirects
+    // which device it points to, rather than building a setup from scratch
+    // -- passing a preferred device name straight into initialise() was
+    // tried first and failed outright ("no channels") the one time it was
+    // actually run against real hardware, presumably because the ALSA
+    // backend's input/output device name lists aren't guaranteed to line up
+    // the way that call assumes.
+    if (auto* type = deviceManager.getCurrentDeviceTypeObject())
+    {
+        type->scanForDevices();
+
+        juce::String usbInputName;
+        for (auto& name : type->getDeviceNames (true))
+        {
+            if (name.containsIgnoreCase ("USB Audio"))
+            {
+                usbInputName = name;
+                break;
+            }
+        }
+
+        juce::String usbOutputName;
+        if (usbInputName.isNotEmpty())
+            for (auto& name : type->getDeviceNames (false))
+                if (name == usbInputName)
+                {
+                    usbOutputName = name;
+                    break;
+                }
+
+        juce::AudioDeviceManager::AudioDeviceSetup currentSetup;
+        deviceManager.getAudioDeviceSetup (currentSetup);
+
+        if (usbInputName.isNotEmpty() && usbOutputName.isNotEmpty()
+            && (currentSetup.inputDeviceName != usbInputName || currentSetup.outputDeviceName != usbOutputName))
+        {
+            // A FRESH setup, not the placeholder device's -- its channel
+            // bitmask/sample rate/buffer size are specific to a 128-channel
+            // device and don't necessarily mean anything on a 6-channel
+            // one. Leaving sampleRate/bufferSize/channel masks at their
+            // just-default-constructed values (0 / empty / "use default")
+            // is exactly what a fresh initialiseWithDefaultDevices() would
+            // pick for this device, computed by JUCE itself rather than
+            // carried over from a different device.
+            juce::AudioDeviceManager::AudioDeviceSetup setup;
+            setup.inputDeviceName = usbInputName;
+            setup.outputDeviceName = usbOutputName;
+            setup.useDefaultInputChannels = true;
+            setup.useDefaultOutputChannels = true;
+
+            const auto switchErr = deviceManager.setAudioDeviceSetup (setup, true);
+            if (switchErr.isNotEmpty())
+                juce::Logger::writeToLog ("AudioEngine: could not switch to \"" + usbInputName + "\" -- "
+                                           + switchErr + " (staying on the default device)");
+        }
+    }
+
+    if (auto* device = deviceManager.getCurrentAudioDevice())
+        juce::Logger::writeToLog ("AudioEngine: using \"" + device->getName() + "\" -- "
+                                   + juce::String (device->getInputChannelNames().size()) + " input(s), "
+                                   + juce::String (device->getOutputChannelNames().size()) + " output(s)");
 
     deviceManager.addAudioCallback (this);
     startTimer (100); // DeferredReclaimer sweep at 10Hz -- comfortably above the 500ms safety margin
@@ -119,9 +211,14 @@ void AudioEngine::timerCallback()
 
 juce::StringArray AudioEngine::getAvailableInputChannelNames() const
 {
-    if (auto* device = deviceManager.getCurrentAudioDevice())
-        return device->getInputChannelNames();
-    return {};
+    auto* device = deviceManager.getCurrentAudioDevice();
+    if (device == nullptr)
+        return {};
+
+    auto names = device->getInputChannelNames();
+    if (names.size() > maxSaneChannelCount)
+        names.removeRange (maxSaneChannelCount, names.size() - maxSaneChannelCount);
+    return names;
 }
 
 juce::StringArray AudioEngine::getAvailableOutputPairNames() const
@@ -131,7 +228,7 @@ juce::StringArray AudioEngine::getAvailableOutputPairNames() const
     if (device == nullptr)
         return pairs;
 
-    const auto count = device->getOutputChannelNames().size();
+    const auto count = juce::jmin (maxSaneChannelCount, device->getOutputChannelNames().size());
     for (int i = 0; i < count; i += 2)
     {
         pairs.add (i + 1 < count ? "Out " + juce::String (i + 1) + "/" + juce::String (i + 2)

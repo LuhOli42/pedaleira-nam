@@ -28,6 +28,10 @@ ParameterPanel::ParameterPanel()
     addAndMakeVisible (removeButton);
     removeButton.onClick = [this] { if (current != nullptr && onRemoveRequested) onRemoveRequested (current); };
 
+    addAndMakeVisible (knobViewport);
+    knobViewport.setViewedComponent (&knobGridHost, false);
+    knobViewport.setScrollBarsShown (true, false);
+
     rebuildForCurrentProcessor();
 }
 
@@ -50,8 +54,8 @@ void ParameterPanel::rebuildForCurrentProcessor()
 {
     for (auto& row : sliders)
     {
-        removeChildComponent (row.slider.get());
-        removeChildComponent (row.label.get());
+        knobGridHost.removeChildComponent (row.slider.get());
+        knobGridHost.removeChildComponent (row.label.get());
     }
     sliders.clear();
 
@@ -67,11 +71,13 @@ void ParameterPanel::rebuildForCurrentProcessor()
         browseInstalledButton.setVisible (false);
         searchTone3000Button.setVisible (false);
         removeButton.setVisible (false);
+        knobViewport.setVisible (false);
         resized();
         return;
     }
 
     titleLabel.setText (current->getName(), juce::dontSendNotification);
+    knobViewport.setVisible (true);
     bypassToggle.setVisible (true);
     bypassToggle.setToggleState (current->isBypassed(), juce::dontSendNotification);
     browseInstalledButton.setVisible (current->wantsModelFile());
@@ -104,8 +110,8 @@ void ParameterPanel::rebuildForCurrentProcessor()
                     *floatParam = (float) rawSlider->getValue();
                 };
 
-                addAndMakeVisible (*row.label);
-                addAndMakeVisible (*row.slider);
+                knobGridHost.addAndMakeVisible (*row.label);
+                knobGridHost.addAndMakeVisible (*row.slider);
                 sliders.push_back (std::move (row));
             }
         }
@@ -195,6 +201,30 @@ void ParameterPanel::openTone3000Search()
         onPushOverlay (std::move (dialog));
 }
 
+int ParameterPanel::getPreferredContentHeight (int availableWidth) const
+{
+    if (current == nullptr)
+        return 0;
+
+    // Mirrors resized()'s own layout math -- see its comments for what each
+    // number is.
+    int height = 20; // getLocalBounds().reduced (10) -- top + bottom
+    height += 28;     // title/bypass/remove row
+    height += 20;     // status label
+    if (browseInstalledButton.isVisible() || searchTone3000Button.isVisible())
+        height += 28; // browse/search row
+    height += 8;      // gap before the knob grid
+
+    constexpr int cellWidth = 92;
+    constexpr int cellHeight = 106;
+    const int knobAreaWidth = juce::jmax (cellWidth, availableWidth - 20);
+    const int columns = juce::jmax (1, knobAreaWidth / cellWidth);
+    const int rows = sliders.empty() ? 0 : (int) ((sliders.size() + (size_t) columns - 1) / (size_t) columns);
+    height += rows * cellHeight;
+
+    return height;
+}
+
 void ParameterPanel::resized()
 {
     auto area = getLocalBounds().reduced (10);
@@ -220,28 +250,40 @@ void ParameterPanel::resized()
     }
 
     area.removeFromTop (8);
+    knobViewport.setBounds (area);
 
     // A pedal-panel-style row of knobs, wrapping to a new row if the panel
-    // is narrow -- not the stacked full-width sliders this used to be.
+    // is narrow. Laid out inside knobGridHost (not this panel directly) so
+    // a processor with more knobs than fit in the drawer's capped height
+    // scrolls instead of getting clipped off -- see ParameterPanel.h.
     constexpr int cellWidth = 92;
     constexpr int cellHeight = 106;
     constexpr int knobSize = 66;
 
-    int x = area.getX();
-    int y = area.getY();
+    const int hostWidth = juce::jmax (cellWidth, knobViewport.getWidth());
+    const int columns = juce::jmax (1, hostWidth / cellWidth);
+
+    int x = 0;
+    int y = 0;
+    int col = 0;
 
     for (auto& row : sliders)
     {
-        if (x + cellWidth > area.getRight() && x > area.getX())
+        if (col >= columns)
         {
-            x = area.getX();
+            col = 0;
+            x = 0;
             y += cellHeight;
         }
 
         row.label->setBounds (x, y, cellWidth, 16);
         row.slider->setBounds (x + (cellWidth - knobSize) / 2, y + 18, knobSize, knobSize + 22);
         x += cellWidth;
+        ++col;
     }
+
+    const int totalRows = sliders.empty() ? 0 : (int) ((sliders.size() + (size_t) columns - 1) / (size_t) columns);
+    knobGridHost.setSize (hostWidth, totalRows * cellHeight);
 }
 
 void ParameterPanel::paint (juce::Graphics& g)

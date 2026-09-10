@@ -93,28 +93,27 @@ void NAMProcessor::process (juce::AudioBuffer<float>& buffer)
 
 void NAMProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
+    // A chip -- see docs/icons/AGENT-icon-notes.md: this is the unified
+    // icon set's "Neura Amp"/"Neura Pedal" glyph. Deliberately the SAME
+    // glyph for both roles (that's what the reference sheet itself does --
+    // the category colour and block label are what tell them apart, not
+    // the icon), a small IC outline with a centre dot and pin stubs on all
+    // four sides standing in for "this is the neural model block".
     g.setColour (juce::Colours::white);
 
-    if (isPedalRole())
+    auto chip = b.reduced (b.getWidth() * 0.2f, b.getHeight() * 0.2f);
+    g.drawRoundedRectangle (chip, 2.0f, 2.0f);
+    g.fillEllipse (chip.getCentreX() - 3.0f, chip.getCentreY() - 3.0f, 6.0f, 6.0f);
+
+    for (int i = -1; i <= 1; i += 2)
     {
-        // A lightning bolt -- the same visual language as "neural"/energy,
-        // and it reads as clearly different from Overdrive's clipped wave.
-        juce::Path bolt;
-        bolt.startNewSubPath (b.getCentreX() + b.getWidth() * 0.12f, b.getY());
-        bolt.lineTo (b.getX() + b.getWidth() * 0.28f, b.getCentreY() - 1.0f);
-        bolt.lineTo (b.getCentreX(), b.getCentreY() - 1.0f);
-        bolt.lineTo (b.getCentreX() - b.getWidth() * 0.12f, b.getBottom());
-        bolt.lineTo (b.getRight() - b.getWidth() * 0.28f, b.getCentreY() + 1.0f);
-        bolt.lineTo (b.getCentreX(), b.getCentreY() + 1.0f);
-        bolt.closeSubPath();
-        g.fillPath (bolt);
-    }
-    else
-    {
-        // A speaker cone -- two concentric rings and a centre cap.
-        g.drawEllipse (b.reduced (b.getWidth() * 0.12f), 2.0f);
-        g.drawEllipse (b.reduced (b.getWidth() * 0.32f), 2.0f);
-        g.fillEllipse (b.getCentreX() - 3.5f, b.getCentreY() - 3.5f, 7.0f, 7.0f);
+        const float x = chip.getCentreX() + (float) i * chip.getWidth() * 0.28f;
+        g.drawLine (x, b.getY(), x, chip.getY(), 1.6f);
+        g.drawLine (x, chip.getBottom(), x, b.getBottom(), 1.6f);
+
+        const float y = chip.getCentreY() + (float) i * chip.getHeight() * 0.28f;
+        g.drawLine (b.getX(), y, chip.getX(), y, 1.6f);
+        g.drawLine (chip.getRight(), y, b.getRight(), y, 1.6f);
     }
 }
 

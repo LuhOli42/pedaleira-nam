@@ -44,6 +44,14 @@ public:
     void setProcessor (EffectProcessor* processorToEdit);
     void refresh(); // call periodically -- picks up status text changes (e.g. after a model load)
 
+    /** How tall this panel would need to be, at the given width, to show
+        everything for the current processor without the knob grid having
+        to scroll. MainComponent uses this to size the drawer adaptively
+        (still capped -- see MainComponent::resized()) instead of always
+        taking a fixed fraction of the window regardless of content. 0 with
+        nothing selected. Must mirror resized()'s own layout math. */
+    int getPreferredContentHeight (int availableWidth) const;
+
     void resized() override;
     void paint (juce::Graphics& g) override;
 
@@ -78,6 +86,14 @@ private:
         juce::AudioParameterFloat* param = nullptr;
     };
     std::vector<SliderRow> sliders;
+
+    // The knob grid scrolls instead of clipping -- this drawer is capped at
+    // 1/4 of the window (see MainComponent), which a processor with a lot
+    // of parameters can easily be taller than. knobGridHost is sized to fit
+    // every row of knobs and lives inside knobViewport, which is what's
+    // actually capped to the drawer's bounds.
+    juce::Viewport knobViewport;
+    juce::Component knobGridHost;
 };
 
 } // namespace pedaleira

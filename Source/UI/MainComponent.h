@@ -71,6 +71,11 @@ private:
     };
     std::vector<RetiredProcessor> graveyard;
 
+    // How many blocks fit per row at the chain's current width -- set by
+    // layoutChain(), read back by handleBlockDragEnded() to translate a 2D
+    // drop position into a flat chain index. Always >= 1.
+    int chainColumns = 1;
+
     juce::Viewport chainViewport;
     ChainContainer chainContainer;
     AddBlockButton addButton;
