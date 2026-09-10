@@ -15,16 +15,19 @@ glyph-descriptions transcribed below from memory of that one viewing.
 
 ## Rule for every effect's `drawIcon()`
 
-- White line art only (`juce::Colours::white`), 1.6–2.5px stroke. No fill
-  except small accent dots (see NAM's chip glyph).
+- White line art only (`juce::Colours::white`), 1.6–2.5px stroke. Small
+  filled dots are fine as accents (control knobs, footswitch, speaker
+  grille) — see NAM's amp/amp+cab/pedal glyphs.
 - The glyph communicates the effect TYPE, never the category colour or the
   block's on/off state — `EffectBlockComponent::paint()` already handles
   colour/border/bypass around it (see AGENT.md's UI/UX Design Philosophy).
-- When two roles of the same processor class are close enough in concept
-  that the reference sheet itself draws them near-identically (e.g. Neura
-  Amp / Neura Pedal), don't invent a fake distinction — use the same glyph
-  and let the category colour + block label carry the difference, exactly
-  like the sheet does.
+- Don't assume two roles of the same processor class share a glyph just
+  because they're conceptually close — an earlier version of this file
+  claimed Neura Amp and Neura Pedal use the same "chip" icon on the sheet;
+  that was wrong (confirmed by the user, who has the actual sheet), and got
+  corrected to amp-head-with-knobs vs. stompbox-with-footswitch. Distinct
+  glyphs per role are the default assumption unless you can actually see
+  the sheet says otherwise.
 - Keep icons simple enough to draw as a handful of `juce::Path`/
   `Graphics::drawLine`/`drawEllipse` calls — no bitmaps, no external asset
   loading on the audio-adjacent UI thread.
@@ -55,8 +58,9 @@ palette now for effects that don't exist yet.
 | GateProcessor | Dinamica → Noise Gate | plus/cross | `Source/Effects/GateProcessor.cpp` |
 | CompressorProcessor | Dinamica → Compressor | heartbeat/ECG pulse | `Source/Effects/CompressorProcessor.cpp` |
 | OverdriveProcessor | Drive → Overdrive | smooth S-curve | `Source/Effects/OverdriveProcessor.cpp` |
-| NAMProcessor ("Neural Amp") | Amplificadores → Neura Amp | chip (IC outline, centre dot, 4 pin stubs) | `Source/Effects/NAMProcessor.cpp` |
-| NAMProcessor ("Neural Pedal") | Amplificadores → Neura Pedal | same chip glyph as Neura Amp | `Source/Effects/NAMProcessor.cpp` |
+| NAMProcessor ("Neural Amp") | Amplificadores → Neura Amp | amp head: box + row of control-knob dots on top | `Source/Effects/NAMProcessor.cpp` |
+| NAMProcessor ("Neural Amp + Cab") | Amplificadores → Neura Amp + Cab | amp head stacked over a cab box (2x2 speaker-grille dots) | `Source/Effects/NAMProcessor.cpp` |
+| NAMProcessor ("Neural Pedal") | Amplificadores → Neura Pedal | stompbox outline (narrower top, footswitch dot near the bottom) | `Source/Effects/NAMProcessor.cpp` |
 | IRLoaderProcessor ("Cab") | Amplificadores → Cab | isometric cube | `Source/Effects/IRLoaderProcessor.cpp` |
 | IRLoaderProcessor ("Reverb") | Reverb → Ambient (closest generic match) | 3 concentric rings + centre dot | `Source/Effects/IRLoaderProcessor.cpp` |
 

@@ -15,10 +15,13 @@ void registerBuiltInEffects (EffectRegistry& registry)
     registry.registerType ("Compressor", [] { return std::make_unique<CompressorProcessor>(); });
     registry.registerType ("Overdrive", [] { return std::make_unique<OverdriveProcessor>(); });
 
-    // Same wrapper class, two chain roles -- only the .nam file loaded into
-    // each instance determines whether it sounds like an amp or a pedal.
-    // See NAMProcessor.h.
+    // Same wrapper class, three chain roles -- only the .nam file loaded
+    // into each instance determines whether it sounds like an amp, an
+    // amp+cab, or a pedal. Amp and Amp+Cab process identically (see
+    // NAMProcessor.h) and only exist as separate blocks so TONE3000 search
+    // can be scoped to one gear at a time, per user request.
     registry.registerType ("NeuralAmp", [] { return std::make_unique<NAMProcessor> ("Neural Amp"); });
+    registry.registerType ("NeuralAmpCab", [] { return std::make_unique<NAMProcessor> ("Neural Amp + Cab"); });
     registry.registerType ("NeuralPedal", [] { return std::make_unique<NAMProcessor> ("Neural Pedal"); });
 
     // Same story, one class, two roles -- IRLoaderProcessor convolves with

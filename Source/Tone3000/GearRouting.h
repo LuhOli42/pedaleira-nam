@@ -33,8 +33,15 @@ inline GearRoute routeFor (const juce::String& gear, const juce::String& format)
         if (gear == "pedal")
             return { true, "pedals", "NeuralPedal", ".nam" };
 
-        if (gear == "amp" || gear == "amp-cab" || gear == "full-rig")
+        // Split from each other on request: an amp-only capture (pairs with
+        // a separate Cab block) and an all-in-one amp+cab capture are
+        // different things to go looking for, even though NAMProcessor
+        // loads either through the exact same code path (see NAMProcessor.h).
+        if (gear == "amp")
             return { true, "amps", "NeuralAmp", ".nam" };
+
+        if (gear == "amp-cab" || gear == "full-rig")
+            return { true, "amp-cab", "NeuralAmpCab", ".nam" };
 
         // outboard / experimental nam captures -- loadable, but no chain
         // role fits automatically; the user places it themselves.
@@ -63,10 +70,11 @@ inline GearRoute routeFor (const juce::String& gear, const juce::String& format)
     a block of that type doesn't require re-navigating to find the file. */
 inline juce::String subfolderForProcessorName (const juce::String& processorName)
 {
-    if (processorName == "Neural Amp")   return "amps";
-    if (processorName == "Neural Pedal") return "pedals";
-    if (processorName == "Cab")          return "cabs";
-    if (processorName == "Reverb")       return "reverbs";
+    if (processorName == "Neural Amp")         return "amps";
+    if (processorName == "Neural Amp + Cab")   return "amp-cab";
+    if (processorName == "Neural Pedal")       return "pedals";
+    if (processorName == "Cab")                return "cabs";
+    if (processorName == "Reverb")             return "reverbs";
     return {};
 }
 
@@ -75,24 +83,25 @@ inline juce::String fileWildcardForProcessorName (const juce::String& processorN
 {
     if (processorName == "Cab" || processorName == "Reverb")
         return "*.wav";
-    if (processorName == "Neural Amp" || processorName == "Neural Pedal")
+    if (processorName == "Neural Amp" || processorName == "Neural Amp + Cab" || processorName == "Neural Pedal")
         return "*.nam";
     return "*.*";
 }
 
 /** The forward direction of subfolderForProcessorName(): which TONE3000
-    `gears` query value(s) a block's contextual search should use, so
-    searching from inside a Neural Amp block only ever shows amps. Their
-    API accepts multiple gear values underscore-joined in one query
-    (confirmed in their example client), which is why the amp case asks
-    for both "amp" and "amp-cab" at once -- both are valid sources for this
-    block, an amp-only capture or a full amp+cab rig capture. */
+    `gears` query value a block's contextual search should use, so
+    searching from inside a Neural Amp block only ever shows amp-only
+    captures, and Neural Amp + Cab only ever shows amp+cab captures --
+    deliberately two separate searches (on request), even though
+    NAMProcessor loads either gear's .nam file through the exact same code
+    path (see NAMProcessor.h). */
 inline juce::String gearFilterForProcessorName (const juce::String& processorName)
 {
-    if (processorName == "Neural Amp")   return "amp_amp-cab";
-    if (processorName == "Neural Pedal") return "pedal";
-    if (processorName == "Cab")          return "cab";
-    if (processorName == "Reverb")       return "space";
+    if (processorName == "Neural Amp")         return "amp";
+    if (processorName == "Neural Amp + Cab")   return "amp-cab";
+    if (processorName == "Neural Pedal")       return "pedal";
+    if (processorName == "Cab")                return "cab";
+    if (processorName == "Reverb")             return "space";
     return {};
 }
 

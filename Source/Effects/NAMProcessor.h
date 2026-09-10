@@ -13,11 +13,18 @@ namespace pedaleira
 
 /**
     Realtime-safe wrapper over NeuralAmpModelerCore (nam::DSP). The same
-    class fills two different chain roles -- "Neural Amp" and "Neural
-    Pedal" -- the inference engine itself doesn't know or care which; only
-    the trained .nam file loaded into it differs (a TONE3000 gear=amp/
-    amp-cab capture vs. a gear=pedal capture -- see GearRouting.h). See
-    EffectRegistry::registerBuiltInEffects for how the two roles get
+    class fills three different chain roles -- "Neural Amp", "Neural Amp +
+    Cab", and "Neural Pedal" -- the inference engine itself doesn't know or
+    care which; only the trained .nam file loaded into it differs (a
+    TONE3000 gear=amp capture vs. gear=amp-cab vs. gear=pedal -- see
+    GearRouting.h). "Neural Amp" and "Neural Amp + Cab" process IDENTICALLY
+    (an amp-cab capture is still just a .nam file to nam::get_dsp()) --
+    they're split into two blocks purely so TONE3000 search stays scoped to
+    one gear at a time, on request: an amp-only capture (pair with a
+    separate Cab block yourself) and an all-in-one amp+cab capture are
+    different things to go looking for, even though this engine loads
+    either into the exact same code path. See
+    EffectRegistry::registerBuiltInEffects for how the three roles get
     registered under different names.
 
     Model loading (nam::get_dsp(), which allocates) always happens on the
@@ -56,8 +63,11 @@ public:
         return hasModel() ? "Loaded: " + getLoadedModelName() : juce::String ("No model loaded");
     }
 
-    // Same wrapper, two roles -- colour/icon follow which role this instance
-    // was constructed as (see the chainRoleName passed in by EffectRegistry).
+    // Same wrapper, three roles -- colour/icon follow which role this
+    // instance was constructed as (see the chainRoleName passed in by
+    // EffectRegistry). Amp and Amp+Cab share the "Amplificadores" category
+    // colour (they're the same category on the reference icon sheet); Pedal
+    // gets its own.
     juce::Colour getAccentColour() const override
     {
         return isPedalRole() ? juce::Colour (0xffa8322a) : juce::Colour (0xff2f8f6e);
@@ -66,6 +76,7 @@ public:
 
 private:
     bool isPedalRole() const noexcept { return name.containsIgnoreCase ("Pedal"); }
+    bool isAmpCabRole() const noexcept { return name.containsIgnoreCase ("Cab"); }
     void timerCallback() override { modelSlot.sweep(); }
 
     juce::String name;

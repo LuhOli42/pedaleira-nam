@@ -93,27 +93,52 @@ void NAMProcessor::process (juce::AudioBuffer<float>& buffer)
 
 void NAMProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
-    // A chip -- see docs/icons/AGENT-icon-notes.md: this is the unified
-    // icon set's "Neura Amp"/"Neura Pedal" glyph. Deliberately the SAME
-    // glyph for both roles (that's what the reference sheet itself does --
-    // the category colour and block label are what tell them apart, not
-    // the icon), a small IC outline with a centre dot and pin stubs on all
-    // four sides standing in for "this is the neural model block".
+    // See docs/icons/AGENT-icon-notes.md. Mirrors the plain (non-neural)
+    // Amp/Amp+Cab glyph shapes from the reference sheet per user request --
+    // NOT the same glyph for every role (an earlier version wrongly used
+    // one "chip" icon for all of them): Amp is a head with control knobs,
+    // Amp+Cab stacks that head over a cab, Pedal is its own stompbox shape.
     g.setColour (juce::Colours::white);
 
-    auto chip = b.reduced (b.getWidth() * 0.2f, b.getHeight() * 0.2f);
-    g.drawRoundedRectangle (chip, 2.0f, 2.0f);
-    g.fillEllipse (chip.getCentreX() - 3.0f, chip.getCentreY() - 3.0f, 6.0f, 6.0f);
-
-    for (int i = -1; i <= 1; i += 2)
+    if (isPedalRole())
     {
-        const float x = chip.getCentreX() + (float) i * chip.getWidth() * 0.28f;
-        g.drawLine (x, b.getY(), x, chip.getY(), 1.6f);
-        g.drawLine (x, chip.getBottom(), x, b.getBottom(), 1.6f);
+        // A stompbox, viewed from above: narrower at the top, a footswitch
+        // dot near the bottom -- reads as "pedal", not "amp head".
+        auto box = b.reduced (b.getWidth() * 0.16f, b.getHeight() * 0.08f);
+        juce::Path pedal;
+        pedal.startNewSubPath (box.getX() + box.getWidth() * 0.15f, box.getY());
+        pedal.lineTo (box.getRight() - box.getWidth() * 0.15f, box.getY());
+        pedal.lineTo (box.getRight(), box.getBottom());
+        pedal.lineTo (box.getX(), box.getBottom());
+        pedal.closeSubPath();
+        g.strokePath (pedal, juce::PathStrokeType (1.8f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        g.drawEllipse (box.getCentreX() - 4.0f, box.getBottom() - box.getHeight() * 0.32f, 8.0f, 8.0f, 1.8f);
+        return;
+    }
 
-        const float y = chip.getCentreY() + (float) i * chip.getHeight() * 0.28f;
-        g.drawLine (b.getX(), y, chip.getX(), y, 1.6f);
-        g.drawLine (chip.getRight(), y, b.getRight(), y, 1.6f);
+    // Amp head: a box with a row of control knobs along the top.
+    auto ampBox = isAmpCabRole() ? b.withHeight (b.getHeight() * 0.5f).withY (b.getY())
+                                  : b.reduced (0.0f, b.getHeight() * 0.14f);
+    g.drawRoundedRectangle (ampBox, 2.0f, 1.8f);
+    for (int i = -1; i <= 1; ++i)
+    {
+        const float x = ampBox.getCentreX() + (float) i * ampBox.getWidth() * 0.26f;
+        g.drawEllipse (x - 2.2f, ampBox.getY() + ampBox.getHeight() * 0.32f, 4.4f, 4.4f, 1.4f);
+    }
+
+    if (isAmpCabRole())
+    {
+        // Cab underneath: a box with a 2x2 speaker-grille dot pattern.
+        auto cabBox = b.withY (ampBox.getBottom() + b.getHeight() * 0.08f)
+                       .withHeight (b.getBottom() - (ampBox.getBottom() + b.getHeight() * 0.08f));
+        g.drawRoundedRectangle (cabBox, 2.0f, 1.8f);
+        for (int gx = -1; gx <= 1; gx += 2)
+            for (int gy = -1; gy <= 1; gy += 2)
+            {
+                const float x = cabBox.getCentreX() + (float) gx * cabBox.getWidth() * 0.22f;
+                const float y = cabBox.getCentreY() + (float) gy * cabBox.getHeight() * 0.24f;
+                g.fillEllipse (x - 1.8f, y - 1.8f, 3.6f, 3.6f);
+            }
     }
 }
 
