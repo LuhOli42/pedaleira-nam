@@ -42,6 +42,9 @@ target_sources(PedaleiraNAM PRIVATE
   Source/UI/EffectBlockComponent.cpp
   Source/UI/ParameterPanel.cpp
   Source/UI/MainComponent.cpp
+  Source/UI/Tone3000Panel.cpp
+  Source/Tone3000/Tone3000Manager.cpp
+  Source/Tone3000/LoopbackServer.cpp
 )
 
 target_include_directories(PedaleiraNAM PRIVATE Source)
@@ -66,6 +69,7 @@ target_link_libraries(PedaleiraNAM PRIVATE
   juce::juce_audio_devices
   juce::juce_audio_processors
   juce::juce_core
+  juce::juce_cryptography
   juce::juce_events
   juce::juce_gui_basics
   juce::juce_recommended_config_flags

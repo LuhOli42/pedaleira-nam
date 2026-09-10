@@ -1,5 +1,7 @@
 #include "MainComponent.h"
 
+#include "Tone3000Panel.h"
+
 #include <algorithm>
 
 namespace pedaleira
@@ -21,6 +23,9 @@ MainComponent::MainComponent()
 
     addAndMakeVisible (cpuLabel);
     cpuLabel.setJustificationType (juce::Justification::centredRight);
+
+    addAndMakeVisible (tone3000Button);
+    tone3000Button.onClick = [this] { showTone3000Panel(); };
 
     chainViewport.setViewedComponent (&chainContainer, false);
     chainViewport.setScrollBarsShown (false, true);
@@ -140,6 +145,52 @@ void MainComponent::showAddEffectMenu()
         });
 }
 
+juce::File MainComponent::getModelsDirectory() const
+{
+    return juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory)
+               .getChildFile ("PedaleiraNAM")
+               .getChildFile ("models");
+}
+
+void MainComponent::showTone3000Panel()
+{
+    auto panel = std::make_unique<Tone3000Panel> (tone3000, getModelsDirectory());
+
+    panel->onModelDownloaded = [this] (juce::File file) { loadDownloadedModel (file); };
+
+    juce::DialogWindow::LaunchOptions options;
+    options.content.setOwned (panel.release());
+    options.dialogTitle = "TONE3000";
+    options.dialogBackgroundColour = juce::Colour (0xff141414);
+    options.escapeKeyTriggersCloseButton = true;
+    options.useNativeTitleBar = true;
+    options.resizable = true;
+    options.launchAsync();
+}
+
+void MainComponent::loadDownloadedModel (const juce::File& file)
+{
+    if (selectedProcessor == nullptr || ! selectedProcessor->wantsModelFile())
+    {
+        juce::AlertWindow::showMessageBoxAsync (
+            juce::MessageBoxIconType::InfoIcon, "Model downloaded",
+            "Saved to:\n" + file.getFullPathName()
+                + "\n\nSelect a NAM Amp or Neural Drive block in the chain, then load it from there.");
+        return;
+    }
+
+    try
+    {
+        selectedProcessor->loadModelFile (file);
+        parameterPanel.refresh();
+    }
+    catch (const std::exception& e)
+    {
+        juce::AlertWindow::showMessageBoxAsync (
+            juce::MessageBoxIconType::WarningIcon, "Failed to load model", e.what());
+    }
+}
+
 void MainComponent::timerCallback()
 {
     cpuLabel.setText ("CPU " + juce::String (audioEngine.getCurrentCpuUsage() * 100.0, 1) + "%",
@@ -159,6 +210,7 @@ void MainComponent::resized()
 
     auto top = area.removeFromTop (32);
     cpuLabel.setBounds (top.removeFromRight (120));
+    tone3000Button.setBounds (top.removeFromRight (110).reduced (4, 0));
     titleLabel.setBounds (top);
 
     area.removeFromTop (8);

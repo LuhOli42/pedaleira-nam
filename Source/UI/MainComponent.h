@@ -4,6 +4,7 @@
 #include "ParameterPanel.h"
 #include "../EffectRegistry.h"
 #include "../Engine/AudioEngine.h"
+#include "../Tone3000/Tone3000Manager.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -45,11 +46,15 @@ private:
     void rebuildSignalGraph();
     void layoutChain();
     void showAddEffectMenu();
+    void showTone3000Panel();
+    void loadDownloadedModel (const juce::File& file);
+    juce::File getModelsDirectory() const;
 
     void timerCallback() override;
 
     EffectRegistry registry;
     AudioEngine audioEngine;
+    Tone3000Manager tone3000;
 
     std::vector<std::unique_ptr<EffectProcessor>> chain;
     juce::OwnedArray<EffectBlockComponent> blocks;
@@ -69,6 +74,7 @@ private:
     ParameterPanel parameterPanel;
     juce::Label titleLabel { {}, "Pedaleira NAM" };
     juce::Label cpuLabel;
+    juce::TextButton tone3000Button { "TONE3000" };
 };
 
 } // namespace pedaleira
