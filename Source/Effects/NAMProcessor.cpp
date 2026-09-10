@@ -35,6 +35,11 @@ void NAMProcessor::loadModel (const std::filesystem::path& namFilePath)
     modelSlot.publish (std::move (model));
 }
 
+juce::String NAMProcessor::getLoadedModelName() const
+{
+    return lastLoadedPath.empty() ? juce::String() : juce::String (lastLoadedPath.filename().string());
+}
+
 void NAMProcessor::clearModel()
 {
     modelSlot.publish (nullptr);

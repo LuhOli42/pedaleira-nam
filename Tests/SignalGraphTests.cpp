@@ -42,9 +42,10 @@ public:
     {
         beginTest ("serial chain applies processors in order");
         {
+            TestGainProcessor a (0.5f), b (0.5f);
             SignalGraph graph;
-            graph.addProcessor (std::make_unique<TestGainProcessor> (0.5f));
-            graph.addProcessor (std::make_unique<TestGainProcessor> (0.5f));
+            graph.addProcessor (&a);
+            graph.addProcessor (&b);
             graph.prepare (48000.0, 128, 1);
 
             juce::AudioBuffer<float> buffer (1, 4);
@@ -58,11 +59,10 @@ public:
 
         beginTest ("a bypassed processor does not run process()");
         {
+            TestGainProcessor p (0.0f);
+            p.setBypassed (true);
             SignalGraph graph;
-            auto p = std::make_unique<TestGainProcessor> (0.0f);
-            auto* raw = p.get();
-            raw->setBypassed (true);
-            graph.addProcessor (std::move (p));
+            graph.addProcessor (&p);
             graph.prepare (48000.0, 128, 1);
 
             juce::AudioBuffer<float> buffer (1, 4);
@@ -71,7 +71,7 @@ public:
 
             graph.process (buffer);
 
-            expectEquals (raw->processCalls, 0);
+            expectEquals (p.processCalls, 0);
             expectWithinAbsoluteError (buffer.getSample (0, 0), 1.0f, 1.0e-6f);
         }
 

@@ -36,6 +36,7 @@ public:
     void loadModel (const std::filesystem::path& namFilePath);
     void clearModel();
     bool hasModel() const noexcept { return modelSlot.currentRaw() != nullptr; }
+    juce::String getLoadedModelName() const;
 
     void prepare (double sampleRate, int maxBlockSize, int numChannels) override;
     void process (juce::AudioBuffer<float>& buffer) override;
@@ -43,6 +44,16 @@ public:
 
     juce::AudioProcessorParameterGroup* getParameters() override { return parameters.get(); }
     const char* getName() const override { return name.toRawUTF8(); }
+
+    bool wantsModelFile() const override { return true; }
+    void loadModelFile (const juce::File& file) override
+    {
+        loadModel (std::filesystem::path (file.getFullPathName().toStdString()));
+    }
+    juce::String getStatusText() const override
+    {
+        return hasModel() ? "Loaded: " + getLoadedModelName() : juce::String ("No model loaded");
+    }
 
 private:
     void timerCallback() override { modelSlot.sweep(); }

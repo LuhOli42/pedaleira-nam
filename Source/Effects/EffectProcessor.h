@@ -62,6 +62,18 @@ public:
 
     virtual const char* getName() const = 0;
 
+    /**
+        Lets generic UI code offer a "Load model..." action without
+        needing to know concrete processor types (no dynamic_cast, no
+        per-effect UI code). False/no-op for every processor except the
+        NAM ones.
+    */
+    virtual bool wantsModelFile() const { return false; }
+    virtual void loadModelFile (const juce::File&) {}
+
+    /** Free-form one-line status for generic UI display (e.g. "Loaded: foo.nam"). Empty if nothing to show. */
+    virtual juce::String getStatusText() const { return {}; }
+
 private:
     std::atomic<bool> bypassed { false };
 };

@@ -20,7 +20,10 @@ FetchContent_MakeAvailable(JUCE)
 
 include(cmake/NAMCore.cmake)
 
-juce_add_console_app(PedaleiraNAM
+# A real (if dev-facing, pre-touch, pre-Phase-7) GUI, not a console app --
+# see AGENT.md: the user wants to SEE the chain being built, not just trust
+# test output. Still no presets/split-merge yet, on purpose.
+juce_add_gui_app(PedaleiraNAM
   PRODUCT_NAME "Pedaleira NAM"
   COMPANY_NAME "Pedaleira NAM"
   BUNDLE_ID "com.pedaleiranam.PedaleiraNAM"
@@ -36,6 +39,9 @@ target_sources(PedaleiraNAM PRIVATE
   Source/Effects/CompressorProcessor.cpp
   Source/Effects/OverdriveProcessor.cpp
   Source/Effects/NAMProcessor.cpp
+  Source/UI/EffectBlockComponent.cpp
+  Source/UI/ParameterPanel.cpp
+  Source/UI/MainComponent.cpp
 )
 
 target_include_directories(PedaleiraNAM PRIVATE Source)
@@ -61,6 +67,7 @@ target_link_libraries(PedaleiraNAM PRIVATE
   juce::juce_audio_processors
   juce::juce_core
   juce::juce_events
+  juce::juce_gui_basics
   juce::juce_recommended_config_flags
   juce::juce_recommended_warning_flags
   nam_core

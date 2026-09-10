@@ -1,56 +1,51 @@
-#include "Engine/AudioEngine.h"
+#include "UI/MainComponent.h"
 
-#include <juce_core/juce_core.h>
-#include <juce_events/juce_events.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
-#include <atomic>
-#include <chrono>
-#include <csignal>
-#include <thread>
-
-namespace
+namespace pedaleira
 {
-    std::atomic<bool> shouldStop { false };
-    void handleSignal (int) { shouldStop.store (true); }
-}
 
-int main (int argc, char* argv[])
+class MainWindow : public juce::DocumentWindow
 {
-    juce::ignoreUnused (argc, argv);
-
-    // The MessageManager needs to exist for the AudioEngine's juce::Timer
-    // (DeferredReclaimer sweep) to fire.
-    juce::MessageManager::getInstance();
-
-    std::signal (SIGINT, handleSignal);
-    std::signal (SIGTERM, handleSignal);
-
-    pedaleira::AudioEngine engine;
-
-    if (! engine.start())
+public:
+    explicit MainWindow (const juce::String& name)
+        : DocumentWindow (name,
+                           juce::LookAndFeel::getDefaultLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId),
+                           DocumentWindow::allButtons)
     {
-        juce::Logger::writeToLog ("Pedaleira NAM: failed to start the AudioEngine.");
-        juce::MessageManager::deleteInstance();
-        return 1;
+        setUsingNativeTitleBar (true);
+        setContentOwned (new MainComponent(), true);
+        setResizable (true, false);
+        centreWithSize (getWidth(), getHeight());
+        setVisible (true);
     }
 
-    juce::Logger::writeToLog (
-        "Pedaleira NAM -- Phase 0: engine running, empty graph (passthrough). Ctrl+C to quit.");
-
-    // The signal handler only sets an atomic flag (async-signal-safe); the
-    // actual call into MessageManager happens here, on a normal thread.
-    std::thread watcher ([]
+    void closeButtonPressed() override
     {
-        while (! shouldStop.load())
-            std::this_thread::sleep_for (std::chrono::milliseconds (50));
+        juce::JUCEApplication::getInstance()->systemRequestedQuit();
+    }
+};
 
-        juce::MessageManager::getInstance()->stopDispatchLoop();
-    });
+class PedaleiraNAMApplication : public juce::JUCEApplication
+{
+public:
+    const juce::String getApplicationName() override { return "Pedaleira NAM"; }
+    const juce::String getApplicationVersion() override { return "0.1.0"; }
 
-    juce::MessageManager::getInstance()->runDispatchLoop();
-    watcher.join();
+    void initialise (const juce::String&) override
+    {
+        mainWindow = std::make_unique<MainWindow> (getApplicationName());
+    }
 
-    engine.stop();
-    juce::MessageManager::deleteInstance();
-    return 0;
-}
+    void shutdown() override
+    {
+        mainWindow = nullptr;
+    }
+
+private:
+    std::unique_ptr<MainWindow> mainWindow;
+};
+
+} // namespace pedaleira
+
+START_JUCE_APPLICATION (pedaleira::PedaleiraNAMApplication)
