@@ -86,10 +86,19 @@ void EffectBlockComponent::paint (juce::Graphics& g)
     auto nameArea = iconArea.removeFromBottom (18.0f);
     iconArea.removeFromBottom (2.0f);
 
+    // The block itself isn't square (110x78) but every drawIcon() is drawn
+    // assuming one -- reducing iconArea by different width/height factors
+    // used to hand it a stretched rectangle instead, so every icon that
+    // didn't defensively jmin(width,height) internally came out visibly
+    // squashed. Always hand drawIcon() a proper centred square instead, so
+    // no individual icon implementation has to guard against this itself.
+    const float squareSize = juce::jmin (iconArea.getWidth(), iconArea.getHeight()) * 0.82f;
+    const auto squareIconArea = iconArea.withSizeKeepingCentre (squareSize, squareSize);
+
     if (bypassed)
         g.beginTransparencyLayer (0.4f);
 
-    processor.drawIcon (g, iconArea.reduced (iconArea.getWidth() * 0.18f, iconArea.getHeight() * 0.12f));
+    processor.drawIcon (g, squareIconArea);
 
     if (bypassed)
         g.endTransparencyLayer();
