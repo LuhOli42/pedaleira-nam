@@ -74,6 +74,14 @@ public:
     /** Free-form one-line status for generic UI display (e.g. "Loaded: foo.nam"). Empty if nothing to show. */
     virtual juce::String getStatusText() const { return {}; }
 
+    /** Per-type accent colour for the chain block UI -- lets the UI tell effect
+        categories apart at a glance without knowing concrete types. */
+    virtual juce::Colour getAccentColour() const { return juce::Colour (0xff2d5c56); }
+
+    /** Draws a small representative glyph into `bounds` (already positioned/sized
+        by the caller). Default: nothing -- override for anything shown in the chain UI. */
+    virtual void drawIcon (juce::Graphics&, juce::Rectangle<float>) const {}
+
 private:
     std::atomic<bool> bypassed { false };
 };

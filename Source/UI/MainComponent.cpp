@@ -1,6 +1,7 @@
 #include "MainComponent.h"
 
 #include "Tone3000Panel.h"
+#include "../Tone3000/GearRouting.h"
 
 #include <algorithm>
 
@@ -12,6 +13,26 @@ namespace
     constexpr int blockWidth = 130;
     constexpr int blockHeight = 90;
     constexpr int blockGap = 10;
+
+    // GearRouting.h gives back an EffectRegistry key ("NAMAmp", "Cab", ...);
+    // there's no reverse lookup from a live EffectProcessor* to the key it
+    // was created from, so this leans on each concrete processor's
+    // getName() being kept in sync with its registry key by construction
+    // (see EffectRegistry::registerBuiltInEffects). Good enough without a
+    // wider refactor to track registry keys alongside `chain`.
+    bool matchesRegistryRole (EffectProcessor* p, const juce::String& registryRole)
+    {
+        if (p == nullptr)
+            return false;
+
+        const juce::String actualName (p->getName());
+
+        if (registryRole == "NAMAmp")      return actualName == "NAM Amp";
+        if (registryRole == "NeuralDrive") return actualName == "Neural Drive";
+        if (registryRole == "Cab")         return actualName == "Cab";
+        if (registryRole == "Reverb")      return actualName == "Reverb";
+        return false;
+    }
 }
 
 MainComponent::MainComponent()
@@ -35,6 +56,7 @@ MainComponent::MainComponent()
     addButton.onClick = [this] { showAddEffectMenu(); };
 
     parameterPanel.onRemoveRequested = [this] (EffectProcessor* p) { removeEffect (p); };
+    parameterPanel.setModelsDirectory (getModelsDirectory());
     addAndMakeVisible (parameterPanel);
 
     if (! audioEngine.start())
@@ -118,15 +140,19 @@ void MainComponent::rebuildSignalGraph()
 void MainComponent::layoutChain()
 {
     int x = 0;
+    std::vector<juce::Rectangle<float>> bounds;
+
     for (auto* block : blocks)
     {
         block->setBounds (x, 0, blockWidth, blockHeight);
+        bounds.emplace_back (block->getBounds().toFloat());
         x += blockWidth + blockGap;
     }
     addButton.setBounds (x, 0, blockWidth, blockHeight);
     x += blockWidth;
 
     chainContainer.setSize (juce::jmax (x, chainViewport.getWidth()), blockHeight);
+    chainContainer.setBlockBounds (std::move (bounds));
 }
 
 void MainComponent::showAddEffectMenu()
@@ -155,33 +181,66 @@ juce::File MainComponent::getModelsDirectory() const
 void MainComponent::showTone3000Panel()
 {
     auto panel = std::make_unique<Tone3000Panel> (tone3000, getModelsDirectory());
+    auto* panelPtr = panel.get();
 
-    panel->onModelDownloaded = [this] (juce::File file) { loadDownloadedModel (file); };
+    panelPtr->onModelDownloaded = [this] (juce::File file, juce::String gear, juce::String format)
+    {
+        loadDownloadedModel (file, gear, format);
+    };
 
     juce::DialogWindow::LaunchOptions options;
     options.content.setOwned (panel.release());
     options.dialogTitle = "TONE3000";
     options.dialogBackgroundColour = juce::Colour (0xff141414);
     options.escapeKeyTriggersCloseButton = true;
-    options.useNativeTitleBar = true;
+    // JUCE-drawn decorations, not native -- same reasoning as MainWindow:
+    // native decorations forwarded through distrobox/Wayland are the
+    // suspected reason the main window's close button was easy to hit
+    // unintentionally, and here they apparently made the dialog un-closable
+    // (no working title bar at all) instead.
+    options.useNativeTitleBar = false;
     options.resizable = true;
-    options.launchAsync();
+
+    auto* window = options.launchAsync();
+    panelPtr->onRequestClose = [window] { if (window != nullptr) window->exitModalState (0); };
 }
 
-void MainComponent::loadDownloadedModel (const juce::File& file)
+void MainComponent::loadDownloadedModel (const juce::File& file, const juce::String& gear, const juce::String& format)
 {
-    if (selectedProcessor == nullptr || ! selectedProcessor->wantsModelFile())
+    // Tone3000Panel already refused unsupported formats before downloading,
+    // so route.supported is expected true here -- this call just decides
+    // WHICH block type the file belongs in.
+    const auto route = tone3000routing::routeFor (gear, format);
+
+    EffectProcessor* target = nullptr;
+
+    if (route.registryRole.isNotEmpty() && matchesRegistryRole (selectedProcessor, route.registryRole))
+    {
+        target = selectedProcessor; // already have the right kind of block selected
+    }
+    else if (route.registryRole.isNotEmpty())
+    {
+        addEffect (route.registryRole); // creates it, adds to the chain, and selects it
+        target = selectedProcessor;
+    }
+    else if (selectedProcessor != nullptr && selectedProcessor->wantsModelFile())
+    {
+        target = selectedProcessor; // outboard/experimental gear -- no fixed role, use whatever's selected
+    }
+
+    if (target == nullptr)
     {
         juce::AlertWindow::showMessageBoxAsync (
             juce::MessageBoxIconType::InfoIcon, "Model downloaded",
             "Saved to:\n" + file.getFullPathName()
-                + "\n\nSelect a NAM Amp or Neural Drive block in the chain, then load it from there.");
+                + "\n\nNo matching block type in the chain -- add one manually (\"" + gear
+                + "\" gear), then load it from there.");
         return;
     }
 
     try
     {
-        selectedProcessor->loadModelFile (file);
+        target->loadModelFile (file);
         parameterPanel.refresh();
     }
     catch (const std::exception& e)

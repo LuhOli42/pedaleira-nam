@@ -13,7 +13,11 @@ public:
                            juce::LookAndFeel::getDefaultLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId),
                            DocumentWindow::allButtons)
     {
-        setUsingNativeTitleBar (true);
+        // JUCE-drawn decorations, not the native/Wayland ones -- a window
+        // exported from inside a distrobox container talking to a native
+        // title bar is a plausible source of an unexpected close signal
+        // (unconfirmed, but it's the natural thing to rule out first).
+        setUsingNativeTitleBar (false);
         setContentOwned (new MainComponent(), true);
         setResizable (true, false);
         centreWithSize (getWidth(), getHeight());
@@ -22,6 +26,7 @@ public:
 
     void closeButtonPressed() override
     {
+        juce::Logger::writeToLog ("MainWindow::closeButtonPressed() -- close (X) button was clicked");
         juce::JUCEApplication::getInstance()->systemRequestedQuit();
     }
 };
@@ -34,16 +39,35 @@ public:
 
     void initialise (const juce::String&) override
     {
+        // A real log file, independent of however stdout/stderr get
+        // captured through distrobox/podman -- so "why did it close" is
+        // answerable after the fact instead of guessed at.
+        fileLogger.reset (juce::FileLogger::createDefaultAppLogger (
+            "PedaleiraNAM", "pedaleira-nam.log", "Pedaleira NAM session started"));
+        juce::Logger::setCurrentLogger (fileLogger.get());
+
+        juce::Logger::writeToLog ("initialise() -- creating MainWindow");
         mainWindow = std::make_unique<MainWindow> (getApplicationName());
+        juce::Logger::writeToLog ("initialise() -- MainWindow created and visible");
+    }
+
+    void systemRequestedQuit() override
+    {
+        juce::Logger::writeToLog ("systemRequestedQuit() -- calling quit()");
+        quit();
     }
 
     void shutdown() override
     {
+        juce::Logger::writeToLog ("shutdown() -- destroying MainWindow");
         mainWindow = nullptr;
+        juce::Logger::setCurrentLogger (nullptr);
+        fileLogger = nullptr;
     }
 
 private:
     std::unique_ptr<MainWindow> mainWindow;
+    std::unique_ptr<juce::FileLogger> fileLogger;
 };
 
 } // namespace pedaleira

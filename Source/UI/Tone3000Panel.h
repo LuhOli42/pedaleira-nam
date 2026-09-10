@@ -1,10 +1,12 @@
 #pragma once
 
+#include "OAuthLoginDialog.h"
 #include "../Tone3000/Tone3000Manager.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <functional>
+#include <memory>
 #include <vector>
 
 namespace pedaleira
@@ -29,7 +31,9 @@ public:
     void resized() override;
     void paint (juce::Graphics& g) override;
 
-    std::function<void (juce::File)> onModelDownloaded;
+    /** gear/format are TONE3000's own enum strings -- see GearRouting.h. */
+    std::function<void (juce::File file, juce::String gear, juce::String format)> onModelDownloaded;
+    std::function<void()> onRequestClose;
 
 private:
     void refreshLoginState();
@@ -42,6 +46,7 @@ private:
 
     Tone3000Manager& manager;
     juce::File modelsDir;
+    std::unique_ptr<OAuthLoginDialog> loginDialog;
 
     juce::Label clientIdLabel { {}, "client_id" };
     juce::TextEditor clientIdField;
@@ -52,9 +57,11 @@ private:
     juce::Label statusLabel;
 
     juce::TextEditor searchField;
+    juce::ComboBox gearFilterCombo;
     juce::TextButton searchButton { "Search" };
     juce::ListBox resultsList { "tones", this };
     juce::TextButton downloadButton { "Download selected" };
+    juce::TextButton closeButton { "Close" };
 
     std::vector<Tone3000Manager::Tone> results;
 };

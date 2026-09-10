@@ -91,4 +91,31 @@ void NAMProcessor::process (juce::AudioBuffer<float>& buffer)
             buffer.setSample (ch, i, outputScratch[(size_t) i] * outGain);
 }
 
+void NAMProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
+{
+    g.setColour (juce::Colours::white);
+
+    if (isDriveRole())
+    {
+        // A lightning bolt -- the same visual language as "neural"/energy,
+        // and it reads as clearly different from Overdrive's clipped wave.
+        juce::Path bolt;
+        bolt.startNewSubPath (b.getCentreX() + b.getWidth() * 0.12f, b.getY());
+        bolt.lineTo (b.getX() + b.getWidth() * 0.28f, b.getCentreY() - 1.0f);
+        bolt.lineTo (b.getCentreX(), b.getCentreY() - 1.0f);
+        bolt.lineTo (b.getCentreX() - b.getWidth() * 0.12f, b.getBottom());
+        bolt.lineTo (b.getRight() - b.getWidth() * 0.28f, b.getCentreY() + 1.0f);
+        bolt.lineTo (b.getCentreX(), b.getCentreY() + 1.0f);
+        bolt.closeSubPath();
+        g.fillPath (bolt);
+    }
+    else
+    {
+        // A speaker cone -- two concentric rings and a centre cap.
+        g.drawEllipse (b.reduced (b.getWidth() * 0.12f), 2.0f);
+        g.drawEllipse (b.reduced (b.getWidth() * 0.32f), 2.0f);
+        g.fillEllipse (b.getCentreX() - 3.5f, b.getCentreY() - 3.5f, 7.0f, 7.0f);
+    }
+}
+
 } // namespace pedaleira

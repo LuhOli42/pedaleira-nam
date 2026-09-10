@@ -23,6 +23,8 @@ public:
 
     juce::AudioProcessorParameterGroup* getParameters() override { return parameters.get(); }
     const char* getName() const override { return "Noise Gate"; }
+    juce::Colour getAccentColour() const override { return juce::Colour (0xff2b6ea8); }
+    void drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const override;
 
 private:
     std::unique_ptr<juce::AudioProcessorParameterGroup> parameters;

@@ -77,4 +77,20 @@ void CompressorProcessor::process (juce::AudioBuffer<float>& buffer)
     }
 }
 
+void CompressorProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
+{
+    // Three fader-style handles at different heights -- gain reduction, visually.
+    g.setColour (juce::Colours::white);
+    const float xs[3] = { 0.25f, 0.5f, 0.75f };
+    const float heights[3] = { 0.75f, 0.4f, 0.6f };
+
+    for (int i = 0; i < 3; ++i)
+    {
+        const float x = b.getX() + b.getWidth() * xs[i];
+        const float topY = b.getBottom() - b.getHeight() * heights[i];
+        g.drawLine (x, b.getBottom(), x, topY, 2.0f);
+        g.fillEllipse (x - 3.5f, topY - 3.5f, 7.0f, 7.0f);
+    }
+}
+
 } // namespace pedaleira

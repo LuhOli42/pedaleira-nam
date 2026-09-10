@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ChainContainer.h"
 #include "EffectBlockComponent.h"
 #include "ParameterPanel.h"
 #include "../EffectRegistry.h"
@@ -47,7 +48,7 @@ private:
     void layoutChain();
     void showAddEffectMenu();
     void showTone3000Panel();
-    void loadDownloadedModel (const juce::File& file);
+    void loadDownloadedModel (const juce::File& file, const juce::String& gear, const juce::String& format);
     juce::File getModelsDirectory() const;
 
     void timerCallback() override;
@@ -68,8 +69,8 @@ private:
     std::vector<RetiredProcessor> graveyard;
 
     juce::Viewport chainViewport;
-    juce::Component chainContainer;
-    juce::TextButton addButton { "+ Add effect" };
+    ChainContainer chainContainer;
+    AddBlockButton addButton;
 
     ParameterPanel parameterPanel;
     juce::Label titleLabel { {}, "Pedaleira NAM" };

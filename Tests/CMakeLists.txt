@@ -19,6 +19,7 @@ target_sources(PedaleiraNAM_Tests PRIVATE
   ../Source/Effects/CompressorProcessor.cpp
   ../Source/Effects/OverdriveProcessor.cpp
   ../Source/Effects/NAMProcessor.cpp
+  ../Source/Effects/IRLoaderProcessor.cpp
 )
 
 target_include_directories(PedaleiraNAM_Tests PRIVATE ../Source)
@@ -33,6 +34,7 @@ target_link_libraries(PedaleiraNAM_Tests PRIVATE
   juce::juce_audio_basics
   juce::juce_audio_processors
   juce::juce_core
+  juce::juce_dsp
   juce::juce_events
   juce::juce_recommended_config_flags
   juce::juce_recommended_warning_flags

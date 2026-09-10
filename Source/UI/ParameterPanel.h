@@ -23,6 +23,10 @@ class ParameterPanel : public juce::Component
 public:
     ParameterPanel();
 
+    /** Base models directory (see MainComponent::getModelsDirectory) -- lets the
+        "Load file..." picker default into the right category subfolder. */
+    void setModelsDirectory (juce::File directory) { modelsDir = std::move (directory); }
+
     void setProcessor (EffectProcessor* processorToEdit);
     void refresh(); // call periodically -- picks up status text changes (e.g. after a model load)
 
@@ -36,6 +40,7 @@ private:
     void chooseAndLoadModelFile();
 
     EffectProcessor* current = nullptr;
+    juce::File modelsDir;
 
     juce::Label titleLabel, statusLabel;
     juce::ToggleButton bypassToggle { "Bypassed" };

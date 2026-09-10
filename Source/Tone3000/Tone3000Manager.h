@@ -10,8 +10,6 @@
 namespace pedaleira
 {
 
-class LoopbackServer;
-
 /**
     TONE3000 login (OAuth 2.0 + PKCE), tone search, and model download.
 
@@ -29,9 +27,15 @@ class LoopbackServer;
     t3k_cs_... secret key is documented as server-only -- if you ever find
     yourself wanting to embed it here, that's a bug.
 
-    Redirect is a loopback URI (http://127.0.0.1:<port>/callback); their
-    docs state localhost origins are auto-allowed without registering a
-    redirect URI up front.
+    Login itself is NOT done here: this class only builds the authorize URL
+    and validates/exchanges the code once the UI hands it back (see
+    beginLogin()/completeLogin()). There's no system-browser launch and no
+    local HTTP listener -- the UI shows the authorize page in an embedded
+    WebBrowserComponent (Source/UI/OAuthLoginDialog) and intercepts
+    navigation to the redirect URI itself. That's not a PC-only shortcut:
+    it's the only login flow that also works on the final target (a
+    touchscreen device with no browser installed at all), and it happens to
+    be TONE3000's own documented recommendation for native apps.
 */
 class Tone3000Manager
 {
@@ -41,25 +45,46 @@ public:
 
     void setClientId (const juce::String& newClientId);
     bool hasClientId() const { return clientId.isNotEmpty(); }
+    juce::String getClientId() const { return clientId; }
 
     bool isLoggedIn() const;
     void logOut();
 
-    /** Opens the system browser to authorize, then exchanges the code for tokens.
-        onComplete fires on the message thread. */
-    void beginLogin (std::function<void (bool success, juce::String error)> onComplete);
+    /** Builds the authorize URL and remembers the PKCE verifier/state needed to
+        complete login. Empty string if no client_id is set. The caller (UI) is
+        responsible for showing this URL and detecting navigation to
+        getRedirectUri() (see OAuthLoginDialog). */
+    juce::String beginLogin();
 
+    juce::String getRedirectUri() const { return redirectUri; }
+
+    /** Call once the UI has intercepted a navigation to getRedirectUri() and
+        pulled `code`/`state` out of its query string. Validates state against
+        what beginLogin() generated, then exchanges the code for tokens.
+        onComplete fires on the message thread. */
+    void completeLogin (const juce::String& code, const juce::String& state,
+                         std::function<void (bool success, juce::String error)> onComplete);
+
+    /** gear/format values are exactly the strings TONE3000's API uses (verified
+        against their docs, not guessed): gear one of "amp", "amp-cab", "pedal",
+        "outboard", "cab", "space", "experimental"; format one of "nam", "ir",
+        "aida-x", "aa-snapshot", "proteus". Only "nam" and "ir" are formats this
+        app's engine can actually load (NeuralAmpModelerCore / juce::dsp::Convolution
+        respectively) -- aida-x/aa-snapshot/proteus are other tools' formats. */
     struct Tone
     {
         int id = 0;
         juce::String title;
         juce::String author;
         juce::String license;
+        juce::String gear;
+        juce::String format;
     };
 
     /** Search public tones by name, e.g. "JCM800" or "Tube Screamer".
+        gearFilter is one of the Gear strings above, or empty for no filter.
         onComplete fires on the message thread. */
-    void searchTones (const juce::String& query,
+    void searchTones (const juce::String& query, const juce::String& gearFilter,
                        std::function<void (bool success, std::vector<Tone> results, juce::String error)> onComplete);
 
     /** Downloads a model file given the `model_url` returned by the API.
@@ -93,11 +118,6 @@ private:
     void loadPersistedAuth();
     void savePersistedAuth() const;
 
-    void exchangeCodeForTokens (const juce::String& code,
-                                 const juce::String& verifier,
-                                 const juce::String& redirectUri,
-                                 std::function<void (bool, juce::String)> onComplete);
-
     /** Runs work on a detached background thread, then delivers the result on the message thread.
         The alive flag means a callback that outlives this object simply does nothing. */
     template <typename Work>
@@ -111,7 +131,10 @@ private:
 
     juce::String clientId;
     juce::String accessToken, refreshToken;
-    std::unique_ptr<LoopbackServer> loginServer;
+
+    // Set by beginLogin(), consumed and cleared by completeLogin().
+    juce::String pendingVerifier, pendingState;
+    const juce::String redirectUri = "http://127.0.0.1:17872/callback"; // never actually connected to -- see class comment
 
     std::shared_ptr<std::atomic<bool>> aliveFlag = std::make_shared<std::atomic<bool>> (true);
 };

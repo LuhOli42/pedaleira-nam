@@ -55,7 +55,16 @@ public:
         return hasModel() ? "Loaded: " + getLoadedModelName() : juce::String ("No model loaded");
     }
 
+    // Same wrapper, two roles -- colour/icon follow which role this instance
+    // was constructed as (see the chainRoleName passed in by EffectRegistry).
+    juce::Colour getAccentColour() const override
+    {
+        return isDriveRole() ? juce::Colour (0xffa8322a) : juce::Colour (0xff2f8f6e);
+    }
+    void drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const override;
+
 private:
+    bool isDriveRole() const noexcept { return name.containsIgnoreCase ("Drive"); }
     void timerCallback() override { modelSlot.sweep(); }
 
     juce::String name;

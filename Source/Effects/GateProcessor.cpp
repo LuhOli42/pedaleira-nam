@@ -64,4 +64,20 @@ void GateProcessor::process (juce::AudioBuffer<float>& buffer)
     }
 }
 
+void GateProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
+{
+    // A closed-then-open step, reading left to right -- what a gate does.
+    juce::Path p;
+    p.startNewSubPath (b.getX(), b.getBottom());
+    p.lineTo (b.getX(), b.getCentreY());
+    p.lineTo (b.getCentreX() - b.getWidth() * 0.1f, b.getCentreY());
+    p.lineTo (b.getCentreX() - b.getWidth() * 0.1f, b.getY());
+    p.lineTo (b.getCentreX() + b.getWidth() * 0.1f, b.getY());
+    p.lineTo (b.getCentreX() + b.getWidth() * 0.1f, b.getCentreY());
+    p.lineTo (b.getRight(), b.getCentreY());
+
+    g.setColour (juce::Colours::white);
+    g.strokePath (p, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+}
+
 } // namespace pedaleira

@@ -1,5 +1,7 @@
 #include "ParameterPanel.h"
 
+#include "../Tone3000/GearRouting.h"
+
 namespace pedaleira
 {
 
@@ -102,7 +104,23 @@ void ParameterPanel::chooseAndLoadModelFile()
     if (current == nullptr)
         return;
 
-    fileChooser = std::make_unique<juce::FileChooser> ("Select a NAM model...", juce::File(), "*.nam");
+    const juce::String processorName (current->getName());
+
+    // Defaults into the category subfolder a TONE3000 download of this
+    // type would have landed in (see GearRouting.h) -- if it exists and
+    // has something in it, you shouldn't need to hunt for the file you
+    // just downloaded.
+    auto startDirectory = modelsDir;
+    const auto subfolder = tone3000routing::subfolderForProcessorName (processorName);
+    if (subfolder.isNotEmpty())
+    {
+        const auto candidate = modelsDir.getChildFile (subfolder);
+        if (candidate.isDirectory())
+            startDirectory = candidate;
+    }
+
+    fileChooser = std::make_unique<juce::FileChooser> (
+        "Select a file...", startDirectory, tone3000routing::fileWildcardForProcessorName (processorName));
 
     fileChooser->launchAsync (
         juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,

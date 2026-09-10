@@ -2,6 +2,7 @@
 
 #include "Effects/CompressorProcessor.h"
 #include "Effects/GateProcessor.h"
+#include "Effects/IRLoaderProcessor.h"
 #include "Effects/NAMProcessor.h"
 #include "Effects/OverdriveProcessor.h"
 
@@ -19,6 +20,13 @@ void registerBuiltInEffects (EffectRegistry& registry)
     // pedal. See NAMProcessor.h.
     registry.registerType ("NAMAmp", [] { return std::make_unique<NAMProcessor> ("NAM Amp"); });
     registry.registerType ("NeuralDrive", [] { return std::make_unique<NAMProcessor> ("Neural Drive"); });
+
+    // Same story, one class, two roles -- IRLoaderProcessor convolves with
+    // a WAV impulse response either way; "Cab" vs "Reverb" is just which
+    // TONE3000 gear (cab vs space) the loaded IR came from. See
+    // IRLoaderProcessor.h -- this is NOT the same technology as NAM above.
+    registry.registerType ("Cab", [] { return std::make_unique<IRLoaderProcessor> ("Cab"); });
+    registry.registerType ("Reverb", [] { return std::make_unique<IRLoaderProcessor> ("Reverb"); });
 }
 
 void EffectRegistry::registerType (const juce::String& name, Creator creator)

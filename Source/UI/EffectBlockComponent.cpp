@@ -25,24 +25,30 @@ void EffectBlockComponent::paint (juce::Graphics& g)
     auto bounds = getLocalBounds().toFloat().reduced (3.0f);
     const bool bypassed = processor.isBypassed();
 
-    auto fill = bypassed ? juce::Colour (0xff3a3a3a) : juce::Colour (0xff2d5c56);
+    const auto fill = bypassed ? juce::Colour (0xff2e2e2e) : processor.getAccentColour();
     g.setColour (fill);
     g.fillRoundedRectangle (bounds, 8.0f);
 
     g.setColour (selected ? juce::Colour (0xff6fe0c8) : juce::Colours::black.withAlpha (0.4f));
     g.drawRoundedRectangle (bounds, 8.0f, selected ? 2.5f : 1.0f);
 
-    g.setColour (juce::Colours::white.withAlpha (bypassed ? 0.5f : 1.0f));
-    g.setFont (14.0f);
-    g.drawFittedText (processor.getName(), bounds.reduced (6.0f).toNearestInt(),
-                       juce::Justification::centredTop, 3);
+    // Icon on top, name label along the bottom -- same two-zone layout as
+    // the reference (Quad Cortex's Grid blocks): glyph first, text second.
+    auto iconArea = bounds.reduced (6.0f);
+    auto nameArea = iconArea.removeFromBottom (18.0f);
+    iconArea.removeFromBottom (2.0f);
 
     if (bypassed)
-    {
-        g.setFont (11.0f);
-        g.drawFittedText ("BYPASSED", bounds.reduced (6.0f).toNearestInt(),
-                           juce::Justification::centredBottom, 1);
-    }
+        g.beginTransparencyLayer (0.4f);
+
+    processor.drawIcon (g, iconArea.reduced (iconArea.getWidth() * 0.18f, iconArea.getHeight() * 0.12f));
+
+    if (bypassed)
+        g.endTransparencyLayer();
+
+    g.setColour (juce::Colours::white.withAlpha (bypassed ? 0.5f : 1.0f));
+    g.setFont (12.5f);
+    g.drawFittedText (processor.getName(), nameArea.toNearestInt(), juce::Justification::centred, 2);
 }
 
 } // namespace pedaleira

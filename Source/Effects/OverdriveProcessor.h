@@ -22,6 +22,8 @@ public:
 
     juce::AudioProcessorParameterGroup* getParameters() override { return parameters.get(); }
     const char* getName() const override { return "Overdrive"; }
+    juce::Colour getAccentColour() const override { return juce::Colour (0xffb8622a); }
+    void drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const override;
 
 private:
     std::unique_ptr<juce::AudioProcessorParameterGroup> parameters;

@@ -39,25 +39,40 @@ target_sources(PedaleiraNAM PRIVATE
   Source/Effects/CompressorProcessor.cpp
   Source/Effects/OverdriveProcessor.cpp
   Source/Effects/NAMProcessor.cpp
+  Source/Effects/IRLoaderProcessor.cpp
+  Source/UI/ChainContainer.cpp
   Source/UI/EffectBlockComponent.cpp
   Source/UI/ParameterPanel.cpp
   Source/UI/MainComponent.cpp
   Source/UI/Tone3000Panel.cpp
+  Source/UI/OAuthLoginDialog.cpp
   Source/Tone3000/Tone3000Manager.cpp
-  Source/Tone3000/LoopbackServer.cpp
 )
 
 target_include_directories(PedaleiraNAM PRIVATE Source)
 
-# No webview needed. Curl IS needed from here on for TONE3000 (Tone3000Manager).
+# JUCE_WEB_BROWSER=1: TONE3000 login renders in an embedded WebBrowserComponent
+# (WebKitGTK on Linux, already available -- webkit2gtk-4.1 was found during the
+# juceaide configure step regardless), never a separate system browser process.
+# Curl is needed for TONE3000's REST calls (Tone3000Manager).
 target_compile_definitions(PedaleiraNAM PRIVATE
-  JUCE_WEB_BROWSER=0
+  JUCE_WEB_BROWSER=1
   JUCE_USE_CURL=1
 )
 
 # JUCE_USE_CURL only makes juce_core.cpp call into libcurl -- it doesn't link
 # it. Without this, the link fails with undefined references to curl_*.
 find_package(CURL REQUIRED)
+
+# juce_gui_extra.cpp needs GTK/WebKitGTK headers for WebBrowserComponent on
+# Linux. JUCE's CMake resolves these for its own juceaide helper build, but
+# not for consumer targets -- without this, compiling juce_gui_extra.cpp
+# fails with "gtk/gtk.h: No such file or directory". Same pattern as the
+# CURL::libcurl fix above: ask pkg-config directly rather than assume JUCE
+# wires it up.
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
+pkg_check_modules(WEBKIT2GTK REQUIRED IMPORTED_TARGET webkit2gtk-4.1)
 
 # No LTO: this is a dev-iteration build, and link-time optimization roughly
 # doubles peak memory during the final link (confirmed: it was spawning 20
@@ -70,12 +85,16 @@ target_link_libraries(PedaleiraNAM PRIVATE
   juce::juce_audio_processors
   juce::juce_core
   juce::juce_cryptography
+  juce::juce_dsp
   juce::juce_events
   juce::juce_gui_basics
+  juce::juce_gui_extra
   juce::juce_recommended_config_flags
   juce::juce_recommended_warning_flags
   nam_core
   CURL::libcurl
+  PkgConfig::GTK3
+  PkgConfig::WEBKIT2GTK
 )
 
 enable_testing()

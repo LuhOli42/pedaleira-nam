@@ -1,6 +1,5 @@
 #include "Tone3000Manager.h"
 
-#include "LoopbackServer.h"
 #include "Pkce.h"
 
 #include <juce_events/juce_events.h> // MessageManager::callAsync
@@ -11,7 +10,6 @@ namespace pedaleira
 namespace
 {
     const juce::String apiBase = "https://www.tone3000.com/api/v1";
-    constexpr int loopbackPort = 17872; // arbitrary high port for the OAuth redirect
     constexpr int httpTimeoutMs = 15000;
 }
 
@@ -24,7 +22,6 @@ Tone3000Manager::Tone3000Manager()
 Tone3000Manager::~Tone3000Manager()
 {
     aliveFlag->store (false);
-    loginServer.reset();
 }
 
 void Tone3000Manager::setClientId (const juce::String& newClientId)
@@ -173,61 +170,14 @@ bool Tone3000Manager::httpDownloadToFile (const juce::String& url,
     return true;
 }
 
-void Tone3000Manager::beginLogin (std::function<void (bool, juce::String)> onComplete)
+juce::String Tone3000Manager::beginLogin()
 {
     if (clientId.isEmpty())
-    {
-        onComplete (false, "No TONE3000 client_id set. Create a publishable key at "
-                            "tone3000.com -> Settings -> API Keys, then set it here "
-                            "(or export TONE3000_CLIENT_ID).");
-        return;
-    }
+        return {};
 
-    const auto verifier = pkce::randomUrlSafeString();
-    const auto challenge = pkce::codeChallengeFromVerifier (verifier);
-    const auto state = pkce::randomUrlSafeString (16);
-    const auto redirectUri = "http://127.0.0.1:" + juce::String (loopbackPort) + "/callback";
-
-    loginServer = std::make_unique<LoopbackServer>();
-
-    const bool started = loginServer->start (loopbackPort,
-        [this, verifier, state, redirectUri, onComplete] (const juce::StringPairArray& params)
-        {
-            // Still on the LoopbackServer's own thread here.
-            const auto code = params["code"];
-            const auto returnedState = params["state"];
-            const auto oauthError = params["error"];
-
-            if (oauthError.isNotEmpty())
-            {
-                juce::MessageManager::callAsync ([onComplete, oauthError] { onComplete (false, "Authorization denied: " + oauthError); });
-                return;
-            }
-
-            if (returnedState != state)
-            {
-                // Mismatched state means the redirect didn't come from the
-                // request we started -- treat it as hostile and drop it.
-                juce::MessageManager::callAsync ([onComplete] { onComplete (false, "OAuth state mismatch -- login aborted."); });
-                return;
-            }
-
-            if (code.isEmpty())
-            {
-                juce::MessageManager::callAsync ([onComplete] { onComplete (false, "No authorization code in the redirect."); });
-                return;
-            }
-
-            exchangeCodeForTokens (code, verifier, redirectUri, onComplete);
-        });
-
-    if (! started)
-    {
-        loginServer.reset();
-        onComplete (false, "Could not listen on 127.0.0.1:" + juce::String (loopbackPort)
-                             + " for the OAuth redirect (port already in use?).");
-        return;
-    }
+    pendingVerifier = pkce::randomUrlSafeString();
+    pendingState = pkce::randomUrlSafeString (16);
+    const auto challenge = pkce::codeChallengeFromVerifier (pendingVerifier);
 
     juce::URL authorize (apiBase + "/oauth/authorize");
     authorize = authorize.withParameter ("client_id", clientId)
@@ -235,20 +185,32 @@ void Tone3000Manager::beginLogin (std::function<void (bool, juce::String)> onCom
                           .withParameter ("response_type", "code")
                           .withParameter ("code_challenge", challenge)
                           .withParameter ("code_challenge_method", "S256")
-                          .withParameter ("state", state);
+                          .withParameter ("state", pendingState);
 
-    if (! authorize.launchInDefaultBrowser())
-    {
-        loginServer.reset();
-        onComplete (false, "Could not open the browser for authorization.");
-    }
+    return authorize.toString (true);
 }
 
-void Tone3000Manager::exchangeCodeForTokens (const juce::String& code,
-                                              const juce::String& verifier,
-                                              const juce::String& redirectUri,
-                                              std::function<void (bool, juce::String)> onComplete)
+void Tone3000Manager::completeLogin (const juce::String& code, const juce::String& state,
+                                      std::function<void (bool, juce::String)> onComplete)
 {
+    if (state != pendingState)
+    {
+        // Mismatched state means this redirect didn't come from the
+        // authorize request we started -- treat it as hostile and drop it.
+        onComplete (false, "OAuth state mismatch -- login aborted.");
+        return;
+    }
+
+    if (code.isEmpty())
+    {
+        onComplete (false, "No authorization code in the redirect.");
+        return;
+    }
+
+    const auto verifier = pendingVerifier;
+    pendingVerifier.clear();
+    pendingState.clear();
+
     const auto form = "grant_type=authorization_code"
                        "&code=" + juce::URL::addEscapeChars (code, true)
                        + "&code_verifier=" + juce::URL::addEscapeChars (verifier, true)
@@ -288,8 +250,6 @@ void Tone3000Manager::exchangeCodeForTokens (const juce::String& code,
             if (! alive->load())
                 return;
 
-            loginServer.reset();
-
             if (error.isNotEmpty())
             {
                 onComplete (false, error);
@@ -304,7 +264,7 @@ void Tone3000Manager::exchangeCodeForTokens (const juce::String& code,
     });
 }
 
-void Tone3000Manager::searchTones (const juce::String& query,
+void Tone3000Manager::searchTones (const juce::String& query, const juce::String& gearFilter,
                                     std::function<void (bool, std::vector<Tone>, juce::String)> onComplete)
 {
     if (! isLoggedIn())
@@ -313,7 +273,9 @@ void Tone3000Manager::searchTones (const juce::String& query,
         return;
     }
 
-    const auto url = apiBase + "/tones/search?query=" + juce::URL::addEscapeChars (query, true);
+    auto url = apiBase + "/tones/search?query=" + juce::URL::addEscapeChars (query, true);
+    if (gearFilter.isNotEmpty())
+        url += "&gears=" + juce::URL::addEscapeChars (gearFilter, true);
 
     runInBackground ([this, url, onComplete] (std::shared_ptr<std::atomic<bool>> alive)
     {
@@ -344,6 +306,8 @@ void Tone3000Manager::searchTones (const juce::String& query,
                     tone.id = (int) item.getProperty ("id", 0);
                     tone.title = item.getProperty ("title", {}).toString();
                     tone.license = item.getProperty ("license", {}).toString();
+                    tone.gear = item.getProperty ("gear", {}).toString();
+                    tone.format = item.getProperty ("format", {}).toString();
 
                     const auto user = item.getProperty ("user", juce::var());
                     tone.author = user.getProperty ("username", {}).toString();
