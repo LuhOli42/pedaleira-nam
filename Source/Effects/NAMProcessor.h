@@ -53,6 +53,13 @@ public:
     juce::AudioProcessorParameterGroup* getParameters() override { return parameters.get(); }
     const char* getName() const override { return name.toRawUTF8(); }
 
+    // Base EffectProcessor::getState()/setState() only knows about float
+    // parameters -- which .nam file is loaded is exactly the kind of
+    // "more than that" state the base class docs call out. Needed for
+    // presets to actually restore a model, not just input/output gain.
+    std::unique_ptr<juce::XmlElement> getState() const override;
+    void setState (const juce::XmlElement& state) override;
+
     bool wantsModelFile() const override { return true; }
     void loadModelFile (const juce::File& file) override
     {

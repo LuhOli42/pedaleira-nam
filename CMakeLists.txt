@@ -47,9 +47,11 @@ target_sources(PedaleiraNAM PRIVATE
   Source/UI/OverlayHost.cpp
   Source/UI/ParameterPanel.cpp
   Source/UI/MainComponent.cpp
+  Source/UI/PresetListDialog.cpp
   Source/UI/Tone3000Panel.cpp
   Source/UI/Tone3000SearchDialog.cpp
   Source/UI/OAuthLoginDialog.cpp
+  Source/Presets/PresetManager.cpp
   Source/Tone3000/Tone3000Manager.cpp
 )
 

@@ -111,6 +111,31 @@ juce::Colour IRLoaderProcessor::getAccentColour() const
     return isReverbRole() ? juce::Colour (0xff2d7a9e) : juce::Colour (0xff7a5c2d);
 }
 
+std::unique_ptr<juce::XmlElement> IRLoaderProcessor::getState() const
+{
+    auto xml = EffectProcessor::getState(); // base: mix/output gain
+
+    if (lastLoadedFile != juce::File())
+        xml->setAttribute ("irPath", lastLoadedFile.getFullPathName());
+
+    return xml;
+}
+
+void IRLoaderProcessor::setState (const juce::XmlElement& state)
+{
+    EffectProcessor::setState (state); // base: mix/output gain
+
+    const auto path = state.getStringAttribute ("irPath");
+    if (path.isEmpty())
+        return;
+
+    const juce::File file (path);
+    if (file.existsAsFile())
+        loadImpulseResponse (file);
+    // else: the file moved or was deleted since the preset was saved --
+    // leave this block unloaded rather than fail the whole preset load.
+}
+
 void IRLoaderProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
     // See docs/icons/AGENT-icon-notes.md for the unified icon set this

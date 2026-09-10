@@ -32,15 +32,40 @@ void registerBuiltInEffects (EffectRegistry& registry)
     registry.registerType ("Reverb", [] { return std::make_unique<IRLoaderProcessor> ("Reverb"); });
 }
 
-void EffectRegistry::registerType (const juce::String& name, Creator creator)
+void EffectRegistry::registerType (const juce::String& key, Creator creator)
 {
-    creators[name] = std::move (creator);
+    // Probing with a real (immediately discarded) instance instead of
+    // asking the call site to also type the display name by hand: that
+    // second string would have no way to stay in sync if a processor's
+    // constructor default ever changes, and preset save/load's reverse
+    // lookup (keyForDisplayName) needs this to always exactly match what
+    // getName() really returns at runtime.
+    if (auto probe = creator())
+    {
+        const juce::String displayName (probe->getName());
+        displayNamesByKey[key] = displayName;
+        keysByDisplayName[displayName] = key;
+    }
+
+    creators[key] = std::move (creator);
 }
 
-std::unique_ptr<EffectProcessor> EffectRegistry::create (const juce::String& name) const
+std::unique_ptr<EffectProcessor> EffectRegistry::create (const juce::String& key) const
 {
-    const auto it = creators.find (name);
+    const auto it = creators.find (key);
     return it != creators.end() ? it->second() : nullptr;
+}
+
+juce::String EffectRegistry::displayNameForKey (const juce::String& key) const
+{
+    const auto it = displayNamesByKey.find (key);
+    return it != displayNamesByKey.end() ? it->second : key;
+}
+
+juce::String EffectRegistry::keyForDisplayName (const juce::String& displayName) const
+{
+    const auto it = keysByDisplayName.find (displayName);
+    return it != keysByDisplayName.end() ? it->second : juce::String();
 }
 
 juce::StringArray EffectRegistry::getRegisteredNames() const

@@ -1,5 +1,6 @@
 #include "MainComponent.h"
 
+#include "PresetListDialog.h"
 #include "Tone3000Panel.h"
 
 #include <algorithm>
@@ -31,10 +32,9 @@ MainComponent::MainComponent()
     registerBuiltInEffects (registry);
 
     addAndMakeVisible (presetBadge);
-    presetBadge.setJustificationType (juce::Justification::centred);
-    presetBadge.setFont (juce::Font (20.0f, juce::Font::bold));
-    presetBadge.setColour (juce::Label::textColourId, juce::Colours::grey);
-    presetBadge.setColour (juce::Label::backgroundColourId, juce::Colour (0xff1c1c1c));
+    presetBadge.setColour (juce::TextButton::buttonColourId, juce::Colour (0xff1c1c1c));
+    presetBadge.setColour (juce::TextButton::textColourOffId, juce::Colours::lightgrey);
+    presetBadge.onClick = [this] { showPresetsPanel(); };
 
     addAndMakeVisible (titleLabel);
     titleLabel.setFont (juce::Font (22.0f, juce::Font::bold));
@@ -235,25 +235,32 @@ void MainComponent::handleBlockDragEnded (EffectBlockComponent& blockComp)
 
 void MainComponent::showAddEffectMenu (int insertAtIndex)
 {
-    auto names = registry.getRegisteredNames();
+    auto keys = registry.getRegisteredNames();
 
     juce::PopupMenu menu;
-    for (int i = 0; i < names.size(); ++i)
-        menu.addItem (i + 1, names[i]);
+    for (int i = 0; i < keys.size(); ++i)
+        menu.addItem (i + 1, registry.displayNameForKey (keys[i])); // a human wrote this, not a raw registry key
 
     menu.showMenuAsync (juce::PopupMenu::Options(),
-        [this, names, insertAtIndex] (int result)
+        [this, keys, insertAtIndex] (int result)
         {
-            if (result > 0 && result - 1 < names.size())
-                addEffect (names[result - 1], insertAtIndex);
+            if (result > 0 && result - 1 < keys.size())
+                addEffect (keys[result - 1], insertAtIndex);
         });
 }
 
-juce::File MainComponent::getModelsDirectory() const
+juce::File MainComponent::getModelsDirectory()
 {
     return juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory)
                .getChildFile ("PedaleiraNAM")
                .getChildFile ("models");
+}
+
+juce::File MainComponent::getPresetsDirectory()
+{
+    return juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory)
+               .getChildFile ("PedaleiraNAM")
+               .getChildFile ("presets");
 }
 
 void MainComponent::showSettingsPanel()
@@ -268,6 +275,117 @@ void MainComponent::showSettingsPanel()
     panel->onPopOverlay  = [this] { overlayHost.popOverlay(); };
 
     overlayHost.pushOverlay (std::move (panel));
+}
+
+void MainComponent::showPresetsPanel()
+{
+    auto dialog = std::make_unique<PresetListDialog> (presets.listPresetNames());
+
+    dialog->onSaveRequested = [this] (juce::String name)
+    {
+        presets.savePreset (name, *buildPresetXml());
+        currentPresetName = name;
+        presetBadge.setButtonText (name);
+        overlayHost.popOverlay();
+    };
+
+    dialog->onPresetChosen = [this] (juce::String name)
+    {
+        if (auto xml = presets.loadPreset (name))
+        {
+            applyPresetXml (*xml);
+            currentPresetName = name;
+            presetBadge.setButtonText (name);
+        }
+        overlayHost.popOverlay();
+    };
+
+    dialog->onDeleteRequested = [this] (juce::String name)
+    {
+        presets.deletePreset (name);
+        if (currentPresetName == name)
+        {
+            currentPresetName.clear();
+            presetBadge.setButtonText (juce::String::fromUTF8 ("\xe2\x80\x94"));
+        }
+        overlayHost.popOverlay();
+        showPresetsPanel(); // reopen with a refreshed list -- simplest way to reflect the deletion
+    };
+
+    dialog->onPopOverlay = [this] { overlayHost.popOverlay(); };
+
+    overlayHost.pushOverlay (std::move (dialog));
+}
+
+std::unique_ptr<juce::XmlElement> MainComponent::buildPresetXml() const
+{
+    auto xml = std::make_unique<juce::XmlElement> ("Preset");
+
+    for (auto& p : chain)
+    {
+        const auto key = registry.keyForDisplayName (p->getName());
+        if (key.isEmpty())
+            continue; // shouldn't happen -- every chain block was created via the registry
+
+        auto* blockXml = xml->createNewChildElement ("Block");
+        blockXml->setAttribute ("key", key);
+        blockXml->setAttribute ("bypassed", p->isBypassed());
+        blockXml->addChildElement (p->getState().release());
+    }
+
+    auto* ioXml = xml->createNewChildElement ("IO");
+    ioXml->setAttribute ("inputChannel", audioEngine.getInputChannel());
+    ioXml->setAttribute ("outputPairStart", audioEngine.getOutputChannelPair());
+
+    return xml;
+}
+
+void MainComponent::applyPresetXml (const juce::XmlElement& xml)
+{
+    // Tear the current chain down the same way removeEffect() would, one
+    // block at a time, so nothing bypasses the graveyard/DeferredReclaimer
+    // discipline (rebuildSignalGraph()/layoutChain() re-run every
+    // iteration -- wasteful but this only ever happens from a menu tap,
+    // never the audio thread).
+    while (! blocks.isEmpty())
+        removeEffect (&blocks[0]->processor);
+
+    for (int i = 0; i < xml.getNumChildElements(); ++i)
+    {
+        auto* blockXml = xml.getChildElement (i);
+        if (blockXml->getTagName() != "Block")
+            continue;
+
+        auto processor = registry.create (blockXml->getStringAttribute ("key"));
+        if (processor == nullptr)
+            continue; // an unknown key (e.g. a preset from a future build) -- skip, don't fail the whole load
+
+        if (auto* stateXml = blockXml->getChildByName ("EffectState"))
+            processor->setState (*stateXml);
+        processor->setBypassed (blockXml->getBoolAttribute ("bypassed", false));
+
+        auto* raw = processor.get();
+        chain.push_back (std::move (processor));
+
+        auto block = std::make_unique<EffectBlockComponent> (*raw);
+        block->onClicked = [this, raw] { selectBlock (selectedProcessor == raw ? nullptr : raw); };
+        block->onDragEnded = [this] (EffectBlockComponent& b) { handleBlockDragEnded (b); };
+        chainContainer.addAndMakeVisible (*block);
+        blocks.add (block.release());
+    }
+
+    if (auto* ioXml = xml.getChildByName ("IO"))
+    {
+        const int inCh = ioXml->getIntAttribute ("inputChannel", 0);
+        const int outPair = ioXml->getIntAttribute ("outputPairStart", 0);
+        audioEngine.setInputChannel (inCh);
+        audioEngine.setOutputChannelPair (outPair);
+        inputSelector.setOptions (audioEngine.getAvailableInputChannelNames(), inCh);
+        outputSelector.setOptions (audioEngine.getAvailableOutputPairNames(), outPair / 2);
+    }
+
+    rebuildSignalGraph();
+    layoutChain();
 }
 
 void MainComponent::timerCallback()

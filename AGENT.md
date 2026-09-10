@@ -56,7 +56,7 @@ Every new effect (pedal, modulation, delay, reverb, pitch, whatever) is a new `E
 | Phase | Status | Hardware |
 |---|---|---|
 | 0 — Architecture + JUCE/CMake skeleton | **done** | PC x86 |
-| 1 — Audio Engine + Pedals + NAM + Cab/IR + TONE3000 + Presets | **in progress** (Gate/Compressor/Overdrive + NAMProcessor + a dev GUI + Tone3000Manager done; Cab/IR and Presets not started) | PC x86 |
+| 1 — Audio Engine + Pedals + NAM + Cab/IR + TONE3000 + Presets | **done** (Gate/Compressor/Overdrive, NAMProcessor with Amp/Amp+Cab/Pedal roles, IRLoaderProcessor with Cab/Reverb roles, Tone3000Manager, a real mobile-style GUI, and file-based presets -- see `Source/Presets/PresetManager.h`) | PC x86 |
 | 2 — Delay + Reverb | not started | PC x86 |
 | 3 — Modulation | not started | PC x86 |
 | 4 — Pitch | not started | PC x86 |

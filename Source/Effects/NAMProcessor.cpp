@@ -91,6 +91,36 @@ void NAMProcessor::process (juce::AudioBuffer<float>& buffer)
             buffer.setSample (ch, i, outputScratch[(size_t) i] * outGain);
 }
 
+std::unique_ptr<juce::XmlElement> NAMProcessor::getState() const
+{
+    auto xml = EffectProcessor::getState(); // base: input/output gain
+
+    if (! lastLoadedPath.empty())
+        xml->setAttribute ("modelPath", juce::String (lastLoadedPath.string()));
+
+    return xml;
+}
+
+void NAMProcessor::setState (const juce::XmlElement& state)
+{
+    EffectProcessor::setState (state); // base: input/output gain
+
+    const auto path = state.getStringAttribute ("modelPath");
+    if (path.isEmpty())
+        return;
+
+    try
+    {
+        loadModel (std::filesystem::path (path.toStdString()));
+    }
+    catch (const std::exception&)
+    {
+        // The file may have moved or been deleted since the preset was
+        // saved -- leave this block unloaded rather than fail the whole
+        // preset load over one missing model.
+    }
+}
+
 void NAMProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
     // See docs/icons/AGENT-icon-notes.md. Mirrors the plain (non-neural)

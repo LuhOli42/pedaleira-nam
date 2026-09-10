@@ -1,0 +1,46 @@
+#include "PresetManager.h"
+
+namespace pedaleira
+{
+
+PresetManager::PresetManager (juce::File directoryToUse)
+    : directory (std::move (directoryToUse))
+{
+}
+
+juce::File PresetManager::fileFor (const juce::String& name) const
+{
+    return directory.getChildFile (juce::File::createLegalFileName (name) + ".xml");
+}
+
+juce::StringArray PresetManager::listPresetNames() const
+{
+    juce::StringArray names;
+
+    if (! directory.isDirectory())
+        return names;
+
+    for (auto& file : directory.findChildFiles (juce::File::findFiles, false, "*.xml"))
+        names.add (file.getFileNameWithoutExtension());
+
+    names.sort (true);
+    return names;
+}
+
+std::unique_ptr<juce::XmlElement> PresetManager::loadPreset (const juce::String& name) const
+{
+    return juce::XmlDocument::parse (fileFor (name));
+}
+
+bool PresetManager::savePreset (const juce::String& name, const juce::XmlElement& xml) const
+{
+    directory.createDirectory();
+    return xml.writeTo (fileFor (name));
+}
+
+bool PresetManager::deletePreset (const juce::String& name) const
+{
+    return fileFor (name).deleteFile();
+}
+
+} // namespace pedaleira
