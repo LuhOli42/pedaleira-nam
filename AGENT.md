@@ -46,7 +46,7 @@ Source/
 ├── Models/       # ModelRepository, ModelValidator, ModelLoader — nothing here ever runs on the audio thread
 ├── Tone3000/     # Tone3000Manager — OPTIONAL, pluggable module; the product works without it
 ├── Presets/      # PresetManager — serialization + double-buffered swapping
-└── UI/           # only from Phase 7 onward — reads state via a lock-free FIFO, never calls the Engine directly
+└── UI/           # dev-facing chain builder exists now (pulled forward from Phase 7); touch-optimized polish, drag-to-reorder, and split/merge routing are still Phase 7 work
 ```
 
 Every new effect (pedal, modulation, delay, reverb, pitch, whatever) is a new `EffectProcessor` subclass in `Effects/`, registered in `EffectRegistry`. Don't create special cases in `SignalGraph` for specific effect types — the graph doesn't know (and shouldn't know) the difference between a `GateProcessor` and a `NAMProcessor`.
@@ -56,7 +56,7 @@ Every new effect (pedal, modulation, delay, reverb, pitch, whatever) is a new `E
 | Phase | Status | Hardware |
 |---|---|---|
 | 0 — Architecture + JUCE/CMake skeleton | **done** | PC x86 |
-| 1 — Audio Engine + Pedals + NAM + Cab/IR + TONE3000 + Presets | **in progress** (Gate/Compressor/Overdrive + NAMProcessor done; Cab/IR, TONE3000, Presets not started) | PC x86 |
+| 1 — Audio Engine + Pedals + NAM + Cab/IR + TONE3000 + Presets | **in progress** (Gate/Compressor/Overdrive + NAMProcessor + a dev GUI + Tone3000Manager done; Cab/IR and Presets not started) | PC x86 |
 | 2 — Delay + Reverb | not started | PC x86 |
 | 3 — Modulation | not started | PC x86 |
 | 4 — Pitch | not started | PC x86 |
