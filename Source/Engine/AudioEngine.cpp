@@ -64,15 +64,20 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
 {
     const auto startTicks = juce::Time::getHighResolutionTicks();
 
-    // An empty graph means total bypass: copy input straight to output
-    // before anything else, and let the SignalGraph process on top of that
-    // if there's anything in it.
+    // An empty graph means total bypass: copy the selected input channel to
+    // every output channel before anything else, and let the SignalGraph
+    // process on top of that if there's anything in it. Output routing
+    // (silencing L or R) happens AFTER the graph -- every processor still
+    // always sees a full buffer to work with; routing is purely what
+    // reaches the physical outputs.
+    const int inChIndex = (numInputChannels > 0)
+                               ? juce::jlimit (0, numInputChannels - 1, selectedInputChannel.load (std::memory_order_relaxed))
+                               : 0;
+    const float* in = (numInputChannels > 0) ? inputChannelData[inChIndex] : nullptr;
+
     for (int ch = 0; ch < numOutputChannels; ++ch)
     {
         auto* out = outputChannelData[ch];
-        const float* in = (numInputChannels > 0)
-                               ? inputChannelData[juce::jmin (ch, numInputChannels - 1)]
-                               : nullptr;
 
         if (in != nullptr)
             juce::FloatVectorOperations::copy (out, in, numSamples);
@@ -84,6 +89,12 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
 
     if (auto* graph = graphSlot.currentRaw())
         graph->process (buffer);
+
+    const auto routing = outputRouting.load (std::memory_order_relaxed);
+    if (routing == OutputRouting::leftOnly && numOutputChannels > 1)
+        juce::FloatVectorOperations::clear (outputChannelData[1], numSamples);
+    else if (routing == OutputRouting::rightOnly && numOutputChannels > 0)
+        juce::FloatVectorOperations::clear (outputChannelData[0], numSamples);
 
     const auto elapsedSeconds = juce::Time::highResolutionTicksToSeconds (
         juce::Time::getHighResolutionTicks() - startTicks);
@@ -97,6 +108,20 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
 void AudioEngine::timerCallback()
 {
     graphSlot.sweep();
+}
+
+juce::StringArray AudioEngine::getAvailableInputChannelNames() const
+{
+    if (auto* device = deviceManager.getCurrentAudioDevice())
+        return device->getInputChannelNames();
+    return {};
+}
+
+juce::StringArray AudioEngine::getAvailableOutputChannelNames() const
+{
+    if (auto* device = deviceManager.getCurrentAudioDevice())
+        return device->getOutputChannelNames();
+    return {};
 }
 
 } // namespace pedaleira

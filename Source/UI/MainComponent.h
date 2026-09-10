@@ -2,6 +2,7 @@
 
 #include "ChainContainer.h"
 #include "EffectBlockComponent.h"
+#include "IOSelectorBlock.h"
 #include "ParameterPanel.h"
 #include "../EffectRegistry.h"
 #include "../Engine/AudioEngine.h"
@@ -41,13 +42,14 @@ public:
     void resized() override;
 
 private:
-    void addEffect (const juce::String& registryName);
+    /** insertAtIndex < 0 (the default) means "append at the end". */
+    void addEffect (const juce::String& registryName, int insertAtIndex = -1);
     void removeEffect (EffectProcessor* processor);
     void handleBlockDragEnded (EffectBlockComponent& block);
     void selectBlock (EffectProcessor* processor);
     void rebuildSignalGraph();
     void layoutChain();
-    void showAddEffectMenu();
+    void showAddEffectMenu (int insertAtIndex = -1);
     void showTone3000Panel();
     juce::File getModelsDirectory() const;
 
@@ -71,6 +73,12 @@ private:
     juce::Viewport chainViewport;
     ChainContainer chainContainer;
     AddBlockButton addButton;
+
+    // Fixed at either end of the row (outside the scrolling viewport) --
+    // device I/O routing, not part of the signal graph. See AudioEngine's
+    // setInputChannel/setOutputRouting.
+    IOSelectorBlock inputSelector { "IN" };
+    IOSelectorBlock outputSelector { "OUT" };
 
     ParameterPanel parameterPanel;
     juce::Label titleLabel { {}, "Pedaleira NAM" };

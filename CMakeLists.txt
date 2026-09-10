@@ -42,9 +42,11 @@ target_sources(PedaleiraNAM PRIVATE
   Source/Effects/IRLoaderProcessor.cpp
   Source/UI/ChainContainer.cpp
   Source/UI/EffectBlockComponent.cpp
+  Source/UI/IOSelectorBlock.cpp
   Source/UI/ParameterPanel.cpp
   Source/UI/MainComponent.cpp
   Source/UI/Tone3000Panel.cpp
+  Source/UI/Tone3000SearchDialog.cpp
   Source/UI/OAuthLoginDialog.cpp
   Source/Tone3000/Tone3000Manager.cpp
 )

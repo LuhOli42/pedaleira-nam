@@ -32,7 +32,15 @@ MainComponent::MainComponent()
     addAndMakeVisible (chainViewport);
 
     chainContainer.addAndMakeVisible (addButton);
-    addButton.onClick = [this] { showAddEffectMenu(); };
+    addButton.onClick = [this] { showAddEffectMenu(); }; // append at the end
+
+    chainContainer.onLineClicked = [this] (int clickX)
+    {
+        // Which slot the click landed in, translated to an insertion index:
+        // a click in the gap between block k-1 and block k inserts at k.
+        const int index = juce::jlimit (0, blocks.size(), clickX / (blockWidth + blockGap));
+        showAddEffectMenu (index);
+    };
 
     parameterPanel.onRemoveRequested = [this] (EffectProcessor* p) { removeEffect (p); };
     parameterPanel.setModelsDirectory (getModelsDirectory());
@@ -41,6 +49,22 @@ MainComponent::MainComponent()
 
     if (! audioEngine.start())
         titleLabel.setText ("Pedaleira NAM (failed to open audio device)", juce::dontSendNotification);
+
+    addAndMakeVisible (inputSelector);
+    auto inputNames = audioEngine.getAvailableInputChannelNames();
+    if (inputNames.isEmpty())
+        inputNames.add ("Default");
+    inputSelector.setOptions (inputNames, audioEngine.getInputChannel());
+    inputSelector.onSelectionChanged = [this] (int index) { audioEngine.setInputChannel (index); };
+
+    addAndMakeVisible (outputSelector);
+    outputSelector.setOptions ({ "Stereo (L+R)", "Left only", "Right only" }, 0);
+    outputSelector.onSelectionChanged = [this] (int index)
+    {
+        audioEngine.setOutputRouting (index == 1 ? AudioEngine::OutputRouting::leftOnly
+                                       : index == 2 ? AudioEngine::OutputRouting::rightOnly
+                                                     : AudioEngine::OutputRouting::both);
+    };
 
     layoutChain();
     setSize (960, 560);
@@ -52,20 +76,22 @@ MainComponent::~MainComponent()
     audioEngine.stop(); // must happen before chain's processors are destroyed by the member destructors below
 }
 
-void MainComponent::addEffect (const juce::String& registryName)
+void MainComponent::addEffect (const juce::String& registryName, int insertAtIndex)
 {
     auto processor = registry.create (registryName);
     if (processor == nullptr)
         return;
 
     auto* raw = processor.get();
-    chain.push_back (std::move (processor));
+    const int index = (insertAtIndex < 0 || insertAtIndex > (int) chain.size()) ? (int) chain.size() : insertAtIndex;
+
+    chain.insert (chain.begin() + index, std::move (processor));
 
     auto block = std::make_unique<EffectBlockComponent> (*raw);
     block->onClicked = [this, raw] { selectBlock (raw); };
     block->onDragEnded = [this] (EffectBlockComponent& b) { handleBlockDragEnded (b); };
     chainContainer.addAndMakeVisible (*block);
-    blocks.add (block.release());
+    blocks.insert (index, block.release());
 
     rebuildSignalGraph();
     layoutChain();
@@ -168,7 +194,7 @@ void MainComponent::handleBlockDragEnded (EffectBlockComponent& blockComp)
     layoutChain(); // snaps every block, including the dragged one, back onto the clean grid
 }
 
-void MainComponent::showAddEffectMenu()
+void MainComponent::showAddEffectMenu (int insertAtIndex)
 {
     auto names = registry.getRegisteredNames();
 
@@ -177,10 +203,10 @@ void MainComponent::showAddEffectMenu()
         menu.addItem (i + 1, names[i]);
 
     menu.showMenuAsync (juce::PopupMenu::Options(),
-        [this, names] (int result)
+        [this, names, insertAtIndex] (int result)
         {
             if (result > 0 && result - 1 < names.size())
-                addEffect (names[result - 1]);
+                addEffect (names[result - 1], insertAtIndex);
         });
 }
 
@@ -238,7 +264,12 @@ void MainComponent::resized()
     titleLabel.setBounds (top);
 
     area.removeFromTop (8);
-    chainViewport.setBounds (area.removeFromTop (blockHeight + 12));
+    auto chainRow = area.removeFromTop (blockHeight + 12);
+    inputSelector.setBounds (chainRow.removeFromLeft (blockWidth).withHeight (blockHeight));
+    chainRow.removeFromLeft (8);
+    outputSelector.setBounds (chainRow.removeFromRight (blockWidth).withHeight (blockHeight));
+    chainRow.removeFromRight (8);
+    chainViewport.setBounds (chainRow);
     layoutChain();
 
     area.removeFromTop (8);

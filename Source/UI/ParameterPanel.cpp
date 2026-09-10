@@ -1,5 +1,6 @@
 #include "ParameterPanel.h"
 
+#include "Tone3000SearchDialog.h"
 #include "../Tone3000/GearRouting.h"
 
 namespace pedaleira
@@ -17,24 +18,14 @@ ParameterPanel::ParameterPanel()
     addAndMakeVisible (bypassToggle);
     bypassToggle.onClick = [this] { if (current != nullptr) current->setBypassed (bypassToggle.getToggleState()); };
 
-    addAndMakeVisible (loadModelButton);
-    loadModelButton.onClick = [this] { chooseAndLoadModelFile(); };
+    addAndMakeVisible (browseInstalledButton);
+    browseInstalledButton.onClick = [this] { browseInstalledModels(); };
+
+    addAndMakeVisible (searchTone3000Button);
+    searchTone3000Button.onClick = [this] { openTone3000Search(); };
 
     addAndMakeVisible (removeButton);
     removeButton.onClick = [this] { if (current != nullptr && onRemoveRequested) onRemoveRequested (current); };
-
-    addChildComponent (tone3000SearchField);
-    tone3000SearchField.setTextToShowWhenEmpty ("Search TONE3000...", juce::Colours::grey);
-    tone3000SearchField.onReturnKey = [this] { doTone3000Search(); };
-
-    addChildComponent (tone3000SearchButton);
-    tone3000SearchButton.onClick = [this] { doTone3000Search(); };
-
-    addChildComponent (tone3000ResultsList);
-    tone3000ResultsList.setColour (juce::ListBox::backgroundColourId, juce::Colour (0xff161616));
-
-    addChildComponent (tone3000DownloadButton);
-    tone3000DownloadButton.onClick = [this] { doTone3000DownloadSelected(); };
 
     rebuildForCurrentProcessor();
 }
@@ -63,20 +54,14 @@ void ParameterPanel::rebuildForCurrentProcessor()
     }
     sliders.clear();
 
-    tone3000Results.clear();
-    tone3000ResultsList.updateContent();
-
     if (current == nullptr)
     {
         titleLabel.setText ("No block selected -- click one in the chain above, or add one", juce::dontSendNotification);
         statusLabel.setText ({}, juce::dontSendNotification);
         bypassToggle.setVisible (false);
-        loadModelButton.setVisible (false);
+        browseInstalledButton.setVisible (false);
+        searchTone3000Button.setVisible (false);
         removeButton.setVisible (false);
-        tone3000SearchField.setVisible (false);
-        tone3000SearchButton.setVisible (false);
-        tone3000ResultsList.setVisible (false);
-        tone3000DownloadButton.setVisible (false);
         resized();
         return;
     }
@@ -84,17 +69,9 @@ void ParameterPanel::rebuildForCurrentProcessor()
     titleLabel.setText (current->getName(), juce::dontSendNotification);
     bypassToggle.setVisible (true);
     bypassToggle.setToggleState (current->isBypassed(), juce::dontSendNotification);
-    loadModelButton.setVisible (current->wantsModelFile());
+    browseInstalledButton.setVisible (current->wantsModelFile());
+    searchTone3000Button.setVisible (current->wantsModelFile() && tone3000 != nullptr);
     removeButton.setVisible (true);
-
-    // Contextual search only shows up for blocks that take a file, and only
-    // once TONE3000 is wired in at all (MainComponent::setTone3000Manager) --
-    // the integration stays fully optional either way.
-    const bool showTone3000Search = current->wantsModelFile() && tone3000 != nullptr;
-    tone3000SearchField.setVisible (showTone3000Search);
-    tone3000SearchButton.setVisible (showTone3000Search);
-    tone3000ResultsList.setVisible (showTone3000Search);
-    tone3000DownloadButton.setVisible (showTone3000Search);
 
     if (auto* group = current->getParameters())
     {
@@ -133,40 +110,73 @@ void ParameterPanel::rebuildForCurrentProcessor()
     resized();
 }
 
-void ParameterPanel::chooseAndLoadModelFile()
+void ParameterPanel::browseInstalledModels()
 {
     if (current == nullptr)
         return;
 
     const juce::String processorName (current->getName());
 
-    // Defaults into the category subfolder a TONE3000 download of this
-    // type would have landed in (see GearRouting.h) -- if it exists and
-    // has something in it, you shouldn't need to hunt for the file you
-    // just downloaded.
-    auto startDirectory = modelsDir;
+    // Every block only ever sees its OWN category subfolder -- a Neural
+    // Pedal block's list can never show an amp capture, because it never
+    // looks in the amps/ folder at all. BUG FIXED HERE: this directory used
+    // to only be used if it already existed on disk -- never true before
+    // the first download of that category, so every block silently fell
+    // back to sharing one flat folder and categories looked unseparated.
     const auto subfolder = tone3000routing::subfolderForProcessorName (processorName);
-    if (subfolder.isNotEmpty())
-    {
-        const auto candidate = modelsDir.getChildFile (subfolder);
-        if (candidate.isDirectory())
-            startDirectory = candidate;
-    }
+    const auto folder = subfolder.isNotEmpty() ? modelsDir.getChildFile (subfolder) : modelsDir;
+    folder.createDirectory();
 
-    fileChooser = std::make_unique<juce::FileChooser> (
-        "Select a file...", startDirectory, tone3000routing::fileWildcardForProcessorName (processorName));
+    const auto wildcard = tone3000routing::fileWildcardForProcessorName (processorName);
+    const auto files = folder.findChildFiles (juce::File::findFiles, false, wildcard);
 
-    fileChooser->launchAsync (
-        juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
-        [this] (const juce::FileChooser& chooser)
+    juce::PopupMenu menu;
+    for (int i = 0; i < files.size(); ++i)
+        menu.addItem (i + 1, files.getReference (i).getFileNameWithoutExtension());
+
+    if (! files.isEmpty())
+        menu.addSeparator();
+
+    const int importItemId = files.size() + 1;
+    menu.addItem (importItemId, "Import from disk...");
+
+    menu.showMenuAsync (juce::PopupMenu::Options(),
+        [this, files, importItemId, wildcard, folder] (int result)
         {
-            auto file = chooser.getResult();
+            if (result <= 0 || current == nullptr)
+                return;
 
-            if (file != juce::File() && current != nullptr)
+            if (result == importItemId)
+            {
+                fileChooser = std::make_unique<juce::FileChooser> ("Select a file...", folder, wildcard);
+                fileChooser->launchAsync (
+                    juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+                    [this] (const juce::FileChooser& chooser)
+                    {
+                        auto file = chooser.getResult();
+                        if (file != juce::File() && current != nullptr)
+                        {
+                            try
+                            {
+                                current->loadModelFile (file);
+                            }
+                            catch (const std::exception& e)
+                            {
+                                juce::AlertWindow::showMessageBoxAsync (
+                                    juce::MessageBoxIconType::WarningIcon, "Failed to load model", e.what());
+                            }
+                        }
+                        refresh();
+                    });
+                return;
+            }
+
+            if (result - 1 < files.size())
             {
                 try
                 {
-                    current->loadModelFile (file);
+                    current->loadModelFile (files.getReference (result - 1));
+                    refresh();
                 }
                 catch (const std::exception& e)
                 {
@@ -174,126 +184,49 @@ void ParameterPanel::chooseAndLoadModelFile()
                         juce::MessageBoxIconType::WarningIcon, "Failed to load model", e.what());
                 }
             }
-
-            refresh();
         });
 }
 
-void ParameterPanel::doTone3000Search()
+void ParameterPanel::openTone3000Search()
 {
     if (current == nullptr || tone3000 == nullptr)
         return;
 
-    const auto query = tone3000SearchField.getText().trim();
-    if (query.isEmpty())
-        return;
+    const juce::String processorName (current->getName());
+    const auto gearFilter = tone3000routing::gearFilterForProcessorName (processorName);
+    const auto subfolder = tone3000routing::subfolderForProcessorName (processorName);
+    const auto destinationFolder = subfolder.isNotEmpty() ? modelsDir.getChildFile (subfolder) : modelsDir;
 
-    // The whole point of moving search in here: no manual gear picker --
-    // the block you're editing decides what "amp"/"pedal"/"cab"/"space" to
-    // filter for. See GearRouting.h.
-    const auto gearFilter = tone3000routing::gearFilterForProcessorName (current->getName());
+    auto dialog = std::make_unique<Tone3000SearchDialog> (*tone3000, gearFilter, destinationFolder);
+    auto* dialogPtr = dialog.get();
 
-    statusLabel.setText ("Searching TONE3000 for \"" + query + "\"...", juce::dontSendNotification);
-
-    tone3000->searchTones (query, gearFilter,
-        [this] (bool success, std::vector<Tone3000Manager::Tone> found, juce::String error)
-        {
-            if (! success)
-            {
-                statusLabel.setText (error, juce::dontSendNotification);
-                return;
-            }
-
-            tone3000Results = std::move (found);
-            tone3000ResultsList.updateContent();
-            tone3000ResultsList.deselectAllRows();
-            statusLabel.setText (juce::String ((int) tone3000Results.size()) + " result(s).", juce::dontSendNotification);
-        });
-}
-
-void ParameterPanel::doTone3000DownloadSelected()
-{
-    if (current == nullptr || tone3000 == nullptr)
-        return;
-
-    const int row = tone3000ResultsList.getSelectedRow();
-    if (row < 0 || row >= (int) tone3000Results.size())
+    dialogPtr->onFileReady = [this] (juce::File file)
     {
-        statusLabel.setText ("Select a result first.", juce::dontSendNotification);
-        return;
-    }
+        if (current == nullptr)
+            return;
 
-    const auto& toneResult = tone3000Results[(size_t) row];
-    const auto route = tone3000routing::routeFor (toneResult.gear, toneResult.format);
-
-    if (! route.supported)
-    {
-        statusLabel.setText ("\"" + toneResult.title + "\" is format \"" + toneResult.format
-                                  + "\", which this engine can't load.",
-                              juce::dontSendNotification);
-        return;
-    }
-
-    const auto safeName = juce::File::createLegalFileName (
-        toneResult.title.isEmpty() ? juce::String (toneResult.id) : toneResult.title);
-    const auto destination = modelsDir.getChildFile (route.subfolder).getChildFile (safeName + route.fileExtension);
-
-    statusLabel.setText ("Downloading \"" + toneResult.title + "\"...", juce::dontSendNotification);
-
-    tone3000->downloadFirstModelForTone (toneResult.id, destination,
-        [this, destination] (bool success, juce::String error)
+        try
         {
-            if (! success)
-            {
-                statusLabel.setText (error, juce::dontSendNotification);
-                return;
-            }
-
-            // Straight into the block that was already selected when the
-            // search started -- no guessing which block a download belongs
-            // to, because the search itself was already scoped to this one.
-            if (current != nullptr)
-            {
-                try
-                {
-                    current->loadModelFile (destination);
-                }
-                catch (const std::exception& e)
-                {
-                    juce::AlertWindow::showMessageBoxAsync (
-                        juce::MessageBoxIconType::WarningIcon, "Failed to load model", e.what());
-                }
-            }
-
+            current->loadModelFile (file);
             refresh();
-        });
-}
+        }
+        catch (const std::exception& e)
+        {
+            juce::AlertWindow::showMessageBoxAsync (
+                juce::MessageBoxIconType::WarningIcon, "Failed to load model", e.what());
+        }
+    };
 
-int ParameterPanel::getNumRows()
-{
-    return (int) tone3000Results.size();
-}
+    juce::DialogWindow::LaunchOptions options;
+    options.content.setOwned (dialog.release());
+    options.dialogTitle = "TONE3000 Search";
+    options.dialogBackgroundColour = juce::Colour (0xff141414);
+    options.escapeKeyTriggersCloseButton = true;
+    options.useNativeTitleBar = false; // JUCE-drawn decorations -- see MainWindow/Tone3000Panel for why
+    options.resizable = true;
 
-void ParameterPanel::paintListBoxItem (int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected)
-{
-    if (rowNumber < 0 || rowNumber >= (int) tone3000Results.size())
-        return;
-
-    const auto& toneResult = tone3000Results[(size_t) rowNumber];
-
-    if (rowIsSelected)
-        g.fillAll (juce::Colour (0xff2d5c56));
-
-    g.setColour (juce::Colours::white);
-    g.setFont (13.0f);
-    g.drawText (toneResult.title, 8, 0, width - 16, height / 2, juce::Justification::centredLeft);
-
-    g.setColour (juce::Colours::lightgrey);
-    g.setFont (10.5f);
-    juce::String subtitle = toneResult.author;
-    if (toneResult.license.isNotEmpty())
-        subtitle += "  ·  " + toneResult.license;
-    g.drawText (subtitle, 8, height / 2, width - 16, height / 2, juce::Justification::centredLeft);
+    auto* window = options.launchAsync();
+    dialogPtr->onRequestClose = [window] { if (window != nullptr) window->exitModalState (0); };
 }
 
 void ParameterPanel::resized()
@@ -307,22 +240,17 @@ void ParameterPanel::resized()
 
     statusLabel.setBounds (area.removeFromTop (20));
 
-    if (loadModelButton.isVisible())
-        loadModelButton.setBounds (area.removeFromTop (28).removeFromLeft (200));
-
-    if (tone3000SearchField.isVisible())
+    if (browseInstalledButton.isVisible() || searchTone3000Button.isVisible())
     {
-        area.removeFromTop (8);
-        auto searchRow = area.removeFromTop (28);
-        tone3000SearchButton.setBounds (searchRow.removeFromRight (150));
-        searchRow.removeFromRight (6);
-        tone3000SearchField.setBounds (searchRow);
-
-        area.removeFromTop (6);
-        auto resultsArea = area.removeFromTop (116);
-        tone3000DownloadButton.setBounds (resultsArea.removeFromBottom (26).removeFromRight (170));
-        resultsArea.removeFromBottom (4);
-        tone3000ResultsList.setBounds (resultsArea);
+        auto fileRow = area.removeFromTop (28);
+        if (searchTone3000Button.isVisible())
+            searchTone3000Button.setBounds (fileRow.removeFromRight (170));
+        if (browseInstalledButton.isVisible())
+        {
+            if (searchTone3000Button.isVisible())
+                fileRow.removeFromRight (8);
+            browseInstalledButton.setBounds (fileRow.removeFromLeft (170));
+        }
     }
 
     area.removeFromTop (8);

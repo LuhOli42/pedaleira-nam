@@ -127,20 +127,77 @@ Tone3000Manager::HttpResult Tone3000Manager::httpPostForm (const juce::String& u
     return result;
 }
 
+bool Tone3000Manager::refreshAccessTokenBlocking()
+{
+    if (refreshToken.isEmpty())
+        return false;
+
+    const auto form = "grant_type=refresh_token"
+                       "&refresh_token=" + juce::URL::addEscapeChars (refreshToken, true)
+                       + "&client_id=" + juce::URL::addEscapeChars (clientId, true);
+
+    const auto result = httpPostForm (apiBase + "/oauth/token", form);
+    if (! result.ok)
+        return false;
+
+    const auto parsed = juce::JSON::parse (result.body);
+    auto* obj = parsed.getDynamicObject();
+    if (obj == nullptr)
+        return false;
+
+    const auto newAccess = obj->getProperty ("access_token").toString();
+    if (newAccess.isEmpty())
+        return false;
+
+    accessToken = newAccess;
+
+    const auto newRefresh = obj->getProperty ("refresh_token").toString();
+    if (newRefresh.isNotEmpty())
+        refreshToken = newRefresh;
+
+    savePersistedAuth();
+    return true;
+}
+
+Tone3000Manager::HttpResult Tone3000Manager::httpGetWithRefresh (const juce::String& url, bool withAuth)
+{
+    auto result = httpGet (url, withAuth);
+
+    if (result.statusCode == 401 && withAuth && refreshAccessTokenBlocking())
+        result = httpGet (url, withAuth); // one retry with the freshly refreshed token
+
+    return result;
+}
+
 bool Tone3000Manager::httpDownloadToFile (const juce::String& url,
                                            const juce::File& destination,
-                                           juce::String& error) const
+                                           juce::String& error)
 {
     int statusCode = 0;
+    std::unique_ptr<juce::InputStream> stream;
 
-    const auto options = juce::URL::InputStreamOptions (juce::URL::ParameterHandling::inAddress)
-                             .withConnectionTimeoutMs (httpTimeoutMs)
-                             .withStatusCode (&statusCode)
-                             .withExtraHeaders (accessToken.isNotEmpty()
-                                                     ? "Authorization: Bearer " + accessToken
-                                                     : juce::String());
+    // Same 401 -> refresh -> retry-once dance as httpGetWithRefresh. Model
+    // downloads are just as likely to land after the access token expired
+    // as a search is.
+    for (int attempt = 0; attempt < 2; ++attempt)
+    {
+        const auto options = juce::URL::InputStreamOptions (juce::URL::ParameterHandling::inAddress)
+                                 .withConnectionTimeoutMs (httpTimeoutMs)
+                                 .withStatusCode (&statusCode)
+                                 .withExtraHeaders (accessToken.isNotEmpty()
+                                                         ? "Authorization: Bearer " + accessToken
+                                                         : juce::String());
 
-    auto stream = juce::URL (url).createInputStream (options);
+        stream = juce::URL (url).createInputStream (options);
+
+        if (stream != nullptr && statusCode == 401 && attempt == 0 && refreshAccessTokenBlocking())
+        {
+            stream.reset();
+            continue;
+        }
+
+        break;
+    }
 
     if (stream == nullptr)
     {
@@ -265,6 +322,7 @@ void Tone3000Manager::completeLogin (const juce::String& code, const juce::Strin
 }
 
 void Tone3000Manager::searchTones (const juce::String& query, const juce::String& gearFilter,
+                                    const juce::String& architectureFilter,
                                     std::function<void (bool, std::vector<Tone>, juce::String)> onComplete)
 {
     if (! isLoggedIn())
@@ -276,10 +334,12 @@ void Tone3000Manager::searchTones (const juce::String& query, const juce::String
     auto url = apiBase + "/tones/search?query=" + juce::URL::addEscapeChars (query, true);
     if (gearFilter.isNotEmpty())
         url += "&gears=" + juce::URL::addEscapeChars (gearFilter, true);
+    if (architectureFilter.isNotEmpty())
+        url += "&architecture=" + juce::URL::addEscapeChars (architectureFilter, true);
 
     runInBackground ([this, url, onComplete] (std::shared_ptr<std::atomic<bool>> alive)
     {
-        const auto result = httpGet (url, true);
+        const auto result = httpGetWithRefresh (url, true);
 
         if (! alive->load())
             return;
@@ -375,7 +435,7 @@ void Tone3000Manager::downloadFirstModelForTone (int toneId,
 
     runInBackground ([this, url, destination, onComplete] (std::shared_ptr<std::atomic<bool>> alive)
     {
-        const auto listResult = httpGet (url, true);
+        const auto listResult = httpGetWithRefresh (url, true);
 
         if (! alive->load())
             return;

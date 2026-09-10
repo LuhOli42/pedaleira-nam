@@ -6,6 +6,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <functional>
+#include <memory>
 #include <vector>
 
 namespace pedaleira
@@ -19,23 +20,23 @@ namespace pedaleira
     (see EffectProcessor's default getState()/setState()), so a generic
     editor covers all of them for free, including ones added later.
 
-    Also owns the TONE3000 search for whichever block is selected -- not a
-    separate generic dialog, but contextual: a Neural Amp block only ever
-    searches amps, a Cab block only ever searches cabs (see
-    GearRouting.h::gearFilterForProcessorName). Tone3000Manager is injected
-    and optional (setTone3000Manager()); with none set, the search section
-    just never appears -- the integration stays optional end to end, per
-    ARCHITECTURE.md.
+    Also offers TONE3000 search for whichever block is selected, via a
+    popup (Tone3000SearchDialog) pre-filtered to that block's gear category
+    -- a Neural Amp block only ever searches amps, a Cab block only ever
+    searches cabs (see GearRouting.h::gearFilterForProcessorName).
+    Tone3000Manager is injected and optional (setTone3000Manager()); with
+    none set, the search button just never appears -- the integration
+    stays optional end to end, per ARCHITECTURE.md.
 */
-class ParameterPanel : public juce::Component,
-                        private juce::ListBoxModel
+class ParameterPanel : public juce::Component
 {
 public:
     ParameterPanel();
 
-    /** Base models directory (see MainComponent::getModelsDirectory) -- lets the
-        "Load file..." picker, and downloaded TONE3000 files, land in the right
-        category subfolder. */
+    /** Base models directory (see MainComponent::getModelsDirectory) -- every
+        block only ever browses/saves into its OWN category subfolder under
+        here (amps/pedals/cabs/reverbs -- see GearRouting.h), so a Neural
+        Pedal block never lists an amp capture and vice versa. */
     void setModelsDirectory (juce::File directory) { modelsDir = std::move (directory); }
 
     void setTone3000Manager (Tone3000Manager& managerToUse) { tone3000 = &managerToUse; }
@@ -50,12 +51,8 @@ public:
 
 private:
     void rebuildForCurrentProcessor();
-    void chooseAndLoadModelFile();
-    void doTone3000Search();
-    void doTone3000DownloadSelected();
-
-    int getNumRows() override;
-    void paintListBoxItem (int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override;
+    void browseInstalledModels();
+    void openTone3000Search();
 
     EffectProcessor* current = nullptr;
     juce::File modelsDir;
@@ -63,14 +60,9 @@ private:
 
     juce::Label titleLabel, statusLabel;
     juce::ToggleButton bypassToggle { "Bypassed" };
-    juce::TextButton loadModelButton { "Load file from disk..." };
+    juce::TextButton browseInstalledButton { "Browse installed..." };
+    juce::TextButton searchTone3000Button { "Search TONE3000..." };
     juce::TextButton removeButton { "Remove" };
-
-    juce::TextEditor tone3000SearchField;
-    juce::TextButton tone3000SearchButton { "Search TONE3000" };
-    juce::ListBox tone3000ResultsList { "tone3000results", this };
-    juce::TextButton tone3000DownloadButton { "Download && load" };
-    std::vector<Tone3000Manager::Tone> tone3000Results;
 
     struct SliderRow
     {

@@ -83,8 +83,15 @@ public:
 
     /** Search public tones by name, e.g. "JCM800" or "Tube Screamer".
         gearFilter is one of the Gear strings above, or empty for no filter.
+        architectureFilter is "1" (A1), "2" (A2), "custom", or empty.
+        IMPORTANT, per TONE3000's own docs: omitting architectureFilter does
+        NOT mean "all architectures" -- it means "A1 + Custom, EXCLUDING A2".
+        There is no confirmed single value that means "everything including
+        A2"; getting A2 results at all requires passing "2" explicitly,
+        which then excludes A1/Custom in turn (the API takes one value, not
+        a combinable list the way gears does).
         onComplete fires on the message thread. */
-    void searchTones (const juce::String& query, const juce::String& gearFilter,
+    void searchTones (const juce::String& query, const juce::String& gearFilter, const juce::String& architectureFilter,
                        std::function<void (bool success, std::vector<Tone> results, juce::String error)> onComplete);
 
     /** Downloads a model file given the `model_url` returned by the API.
@@ -112,7 +119,19 @@ private:
 
     /** Streams an authenticated GET straight to disk -- model files are opaque bytes,
         not text, so they must never round-trip through a juce::String. */
-    bool httpDownloadToFile (const juce::String& url, const juce::File& destination, juce::String& error) const;
+    bool httpDownloadToFile (const juce::String& url, const juce::File& destination, juce::String& error);
+
+    /** Blocking (called from a background thread, never the message thread).
+        Exchanges refreshToken for a new access_token and persists it. Access
+        tokens are short-lived (observed ~1 hour) and nothing was refreshing
+        them before -- every call past that point failed with HTTP 401 and
+        surfaced as an opaque "Search failed" error. */
+    bool refreshAccessTokenBlocking();
+
+    /** httpGet, but retries once after a blocking token refresh if the first
+        attempt came back 401. Not const, since a successful refresh mutates
+        accessToken/refreshToken. */
+    HttpResult httpGetWithRefresh (const juce::String& url, bool withAuth);
 
     juce::File getAuthFile() const;
     void loadPersistedAuth();

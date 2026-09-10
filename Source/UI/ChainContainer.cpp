@@ -9,6 +9,12 @@ void ChainContainer::setBlockBounds (std::vector<juce::Rectangle<float>> bounds)
     repaint();
 }
 
+void ChainContainer::mouseUp (const juce::MouseEvent& event)
+{
+    if (onLineClicked)
+        onLineClicked (event.x);
+}
+
 void ChainContainer::paint (juce::Graphics& g)
 {
     // The signal path, always on screen -- not just gaps between blocks.
