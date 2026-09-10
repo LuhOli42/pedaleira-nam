@@ -11,12 +11,14 @@ target_sources(PedaleiraNAM_Tests PRIVATE
   GateProcessorTests.cpp
   CompressorProcessorTests.cpp
   OverdriveProcessorTests.cpp
+  NAMProcessorTests.cpp
   ../Source/EffectRegistry.cpp
   ../Source/Engine/SignalGraph.cpp
   ../Source/Engine/ParameterManager.cpp
   ../Source/Effects/GateProcessor.cpp
   ../Source/Effects/CompressorProcessor.cpp
   ../Source/Effects/OverdriveProcessor.cpp
+  ../Source/Effects/NAMProcessor.cpp
 )
 
 target_include_directories(PedaleiraNAM_Tests PRIVATE ../Source)
@@ -24,6 +26,7 @@ target_include_directories(PedaleiraNAM_Tests PRIVATE ../Source)
 target_compile_definitions(PedaleiraNAM_Tests PRIVATE
   JUCE_WEB_BROWSER=0
   JUCE_USE_CURL=0
+  PEDALEIRA_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 target_link_libraries(PedaleiraNAM_Tests PRIVATE
@@ -33,6 +36,7 @@ target_link_libraries(PedaleiraNAM_Tests PRIVATE
   juce::juce_events
   juce::juce_recommended_config_flags
   juce::juce_recommended_warning_flags
+  nam_core
 )
 
 add_test(NAME PedaleiraNAM_UnitTests COMMAND PedaleiraNAM_Tests)

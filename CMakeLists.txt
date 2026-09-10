@@ -18,6 +18,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(JUCE)
 
+include(cmake/NAMCore.cmake)
+
 juce_add_console_app(PedaleiraNAM
   PRODUCT_NAME "Pedaleira NAM"
   COMPANY_NAME "Pedaleira NAM"
@@ -33,16 +35,26 @@ target_sources(PedaleiraNAM PRIVATE
   Source/Effects/GateProcessor.cpp
   Source/Effects/CompressorProcessor.cpp
   Source/Effects/OverdriveProcessor.cpp
+  Source/Effects/NAMProcessor.cpp
 )
 
 target_include_directories(PedaleiraNAM PRIVATE Source)
 
-# Phase 0: no networking (TONE3000 arrives in Phase 1) and no webview -- keeps the build lean.
+# No webview needed. Curl IS needed from here on for TONE3000 (Tone3000Manager).
 target_compile_definitions(PedaleiraNAM PRIVATE
   JUCE_WEB_BROWSER=0
-  JUCE_USE_CURL=0
+  JUCE_USE_CURL=1
 )
 
+# JUCE_USE_CURL only makes juce_core.cpp call into libcurl -- it doesn't link
+# it. Without this, the link fails with undefined references to curl_*.
+find_package(CURL REQUIRED)
+
+# No LTO: this is a dev-iteration build, and link-time optimization roughly
+# doubles peak memory during the final link (confirmed: it was spawning 20
+# parallel LTRANS jobs). On a machine this size that's the difference
+# between a slow build and a hard crash -- see scripts/build.sh for the
+# incident this comment refers to. Revisit for an actual release build.
 target_link_libraries(PedaleiraNAM PRIVATE
   juce::juce_audio_basics
   juce::juce_audio_devices
@@ -50,8 +62,9 @@ target_link_libraries(PedaleiraNAM PRIVATE
   juce::juce_core
   juce::juce_events
   juce::juce_recommended_config_flags
-  juce::juce_recommended_lto_flags
   juce::juce_recommended_warning_flags
+  nam_core
+  CURL::libcurl
 )
 
 enable_testing()
