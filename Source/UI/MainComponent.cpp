@@ -555,7 +555,7 @@ void MainComponent::resized()
     int panelHeight = 0;
     if (selectedProcessor != nullptr)
     {
-        constexpr int floorForOneKnobRow = 280; // header rows (touch::minTapTarget-tall) + exactly one (now bigger) row of knobs
+        constexpr int floorForOneKnobRow = 240; // one unified button row + exactly one row of knobs
         const int cap = juce::jmax ((int) (getHeight() * 0.25f), floorForOneKnobRow);
         const int preferred = parameterPanel.getPreferredContentHeight (area.getWidth());
         panelHeight = juce::jmin (area.getHeight(), juce::jmin (preferred, cap));

@@ -222,18 +222,20 @@ int ParameterPanel::getPreferredContentHeight (int availableWidth) const
         return 0;
 
     // Mirrors resized()'s own layout math -- see its comments for what each
-    // number is.
+    // number is. A few px of slack at the end guards against this ever
+    // being exactly equal to the actual laid-out height: an exact match
+    // is fragile (any future 1px rounding difference between the two
+    // would silently bring the scrollbar back), a few spare px isn't.
     int height = 20;                    // getLocalBounds().reduced (10) -- top + bottom
-    height += touch::minTapTarget;      // title/bypass/remove row
+    height += touch::minTapTarget;      // the one unified button row (title/bypass/browse/search/remove)
     height += 20;                       // status label
-    if (browseInstalledButton.isVisible() || searchTone3000Button.isVisible())
-        height += touch::minTapTarget;  // browse/search row
     height += 8;                        // gap before the knob grid
 
     const int knobAreaWidth = juce::jmax (knobCellWidth, availableWidth - 20);
     const int columns = juce::jmax (1, knobAreaWidth / knobCellWidth);
     const int rows = sliders.empty() ? 0 : (int) ((sliders.size() + (size_t) columns - 1) / (size_t) columns);
     height += rows * knobCellHeight;
+    height += 6; // slack -- see above
 
     return height;
 }
@@ -242,26 +244,26 @@ void ParameterPanel::resized()
 {
     auto area = getLocalBounds().reduced (10);
 
+    // Every button lives in ONE row, grouped together -- splitting
+    // bypass/remove from browse/search across two separate rows didn't
+    // read as one coherent toolbar, per user feedback.
     auto top = area.removeFromTop (touch::minTapTarget);
     removeButton.setBounds (top.removeFromRight (80));
+    if (searchTone3000Button.isVisible())
+    {
+        top.removeFromRight (6);
+        searchTone3000Button.setBounds (top.removeFromRight (170));
+    }
+    if (browseInstalledButton.isVisible())
+    {
+        top.removeFromRight (6);
+        browseInstalledButton.setBounds (top.removeFromRight (170));
+    }
+    top.removeFromRight (6);
     bypassToggle.setBounds (top.removeFromRight (110));
     titleLabel.setBounds (top);
 
     statusLabel.setBounds (area.removeFromTop (20));
-
-    if (browseInstalledButton.isVisible() || searchTone3000Button.isVisible())
-    {
-        auto fileRow = area.removeFromTop (touch::minTapTarget);
-        if (searchTone3000Button.isVisible())
-            searchTone3000Button.setBounds (fileRow.removeFromRight (170));
-        if (browseInstalledButton.isVisible())
-        {
-            if (searchTone3000Button.isVisible())
-                fileRow.removeFromRight (8);
-            browseInstalledButton.setBounds (fileRow.removeFromLeft (170));
-        }
-    }
-
     area.removeFromTop (8);
     knobViewport.setBounds (area);
 
