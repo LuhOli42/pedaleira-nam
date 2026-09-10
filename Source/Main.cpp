@@ -1,4 +1,5 @@
 #include "UI/MainComponent.h"
+#include "UI/PedaleiraLookAndFeel.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -46,6 +47,11 @@ public:
             "PedaleiraNAM", "pedaleira-nam.log", "Pedaleira NAM session started"));
         juce::Logger::setCurrentLogger (fileLogger.get());
 
+        // Set before MainWindow is constructed -- its own constructor reads
+        // the default LookAndFeel's background colour immediately.
+        lookAndFeel = std::make_unique<PedaleiraLookAndFeel>();
+        juce::LookAndFeel::setDefaultLookAndFeel (lookAndFeel.get());
+
         juce::Logger::writeToLog ("initialise() -- creating MainWindow");
         mainWindow = std::make_unique<MainWindow> (getApplicationName());
         juce::Logger::writeToLog ("initialise() -- MainWindow created and visible");
@@ -61,12 +67,15 @@ public:
     {
         juce::Logger::writeToLog ("shutdown() -- destroying MainWindow");
         mainWindow = nullptr;
+        juce::LookAndFeel::setDefaultLookAndFeel (nullptr); // before lookAndFeel is destroyed below -- no dangling default
+        lookAndFeel = nullptr;
         juce::Logger::setCurrentLogger (nullptr);
         fileLogger = nullptr;
     }
 
 private:
     std::unique_ptr<MainWindow> mainWindow;
+    std::unique_ptr<PedaleiraLookAndFeel> lookAndFeel;
     std::unique_ptr<juce::FileLogger> fileLogger;
 };
 

@@ -153,6 +153,21 @@ meant to think about. Concretely, until Phase 7 replaces this dev GUI:
   despite the filename — it's the app's general Settings screen, TONE3000
   account is just its first section). Don't add a second top-level
   settings surface; add a new section to this one.
+- **Typeface: Inter** (SIL OFL, embedded as binary data — see
+  `Assets/Fonts/`, `Source/UI/PedaleiraLookAndFeel.h`), set as the app's
+  default `juce::LookAndFeel` in `Main.cpp`. Not a system font lookup: the
+  final target is a from-scratch embedded Linux build with no font
+  installed at all, and relying on whatever the OS happens to ship reads
+  as generic "desktop app" besides. Regular + Bold + ExtraBold weights are
+  bundled; `PedaleiraLookAndFeel::getExtraBoldTypeface()` is for the
+  handful of places (the preset number/name) that want the heavier
+  display weight specifically, applied by hand via `FontOptions::
+  withTypeface()` — `juce::Font`'s bold style flag alone only reaches
+  Inter Bold (see `getTypefaceForFont()`).
+- **The preset number/name are deliberately large** (`PresetBadge`,
+  `MainComponent::titleLabel`) — this is a stage instrument; the player
+  reads them from a few feet away, not a toolbar you squint at. Don't
+  shrink them back down for visual tidiness.
 - **Presets have a stable NUMBER, separate from their name** (see
   `PresetManager::numberForExistingPreset()`/`nextAvailableNumber()`),
   shown in `presetBadge`; the preset's name is shown in `titleLabel`

@@ -20,6 +20,19 @@ FetchContent_MakeAvailable(JUCE)
 
 include(cmake/NAMCore.cmake)
 
+# Inter (SIL OFL, see Assets/Fonts/INTER-LICENSE.txt), embedded rather than
+# relying on the OS having a decent font installed -- the final target is a
+# from-scratch embedded Linux build with no guaranteed font at all. Static
+# weights, not the variable font: JUCE's own font engine doesn't reliably
+# expose a variable font's weight axis, but it renders a real bold/extrabold
+# file exactly as designed.
+juce_add_binary_data(PedaleiraNAM_Fonts
+  SOURCES
+    Assets/Fonts/Inter-Regular.ttf
+    Assets/Fonts/Inter-Bold.ttf
+    Assets/Fonts/Inter-ExtraBold.ttf
+)
+
 # A real (if dev-facing, pre-touch, pre-Phase-7) GUI, not a console app --
 # see AGENT.md: the user wants to SEE the chain being built, not just trust
 # test output. Still no presets/split-merge yet, on purpose.
@@ -47,6 +60,8 @@ target_sources(PedaleiraNAM PRIVATE
   Source/UI/OverlayHost.cpp
   Source/UI/ParameterPanel.cpp
   Source/UI/MainComponent.cpp
+  Source/UI/PedaleiraLookAndFeel.cpp
+  Source/UI/PresetBadge.cpp
   Source/UI/PresetListDialog.cpp
   Source/UI/Tone3000Panel.cpp
   Source/UI/Tone3000SearchDialog.cpp
@@ -98,6 +113,7 @@ target_link_libraries(PedaleiraNAM PRIVATE
   juce::juce_recommended_config_flags
   juce::juce_recommended_warning_flags
   nam_core
+  PedaleiraNAM_Fonts
   CURL::libcurl
   PkgConfig::GTK3
   PkgConfig::WEBKIT2GTK

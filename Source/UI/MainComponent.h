@@ -5,6 +5,7 @@
 #include "IOSelectorBlock.h"
 #include "OverlayHost.h"
 #include "ParameterPanel.h"
+#include "PresetBadge.h"
 #include "../EffectRegistry.h"
 #include "../Engine/AudioEngine.h"
 #include "../Presets/PresetManager.h"
@@ -101,13 +102,15 @@ private:
     juce::String currentPresetName;   // empty = no preset loaded/saved since the last change
     int currentPresetNumber = 0;      // 0 = none yet; a real preset's number is always >= 1
 
-    // presetBadge shows the preset NUMBER (e.g. "1") and titleLabel shows
-    // its NAME -- tapping the badge opens PresetListDialog (see
-    // showPresetsPanel()). Once scenes exist (a preset's own internal
-    // variations, e.g. "1A"/"1B"), the badge's text becomes number+letter
-    // in that same slot -- see AGENT.md's UI/UX Design Philosophy -- this
-    // is deliberately not built yet, just planned for.
-    juce::TextButton presetBadge { juce::String::fromUTF8 ("\xe2\x80\x94") }; // em dash placeholder
+    // presetBadge shows the preset NUMBER, big (see PresetBadge.h -- this
+    // is a stage instrument, has to be readable from a few feet away, not
+    // just a toolbar). titleLabel shows its NAME, same size class. Tapping
+    // the badge opens PresetListDialog (see showPresetsPanel()). Once
+    // scenes exist (a preset's own internal variations, e.g. "1A"/"1B"),
+    // the badge's text becomes number+letter in that same slot -- see
+    // AGENT.md's UI/UX Design Philosophy -- this is deliberately not built
+    // yet, just planned for.
+    PresetBadge presetBadge;
     // Saves the currently loaded preset in place, no dialog -- only visible
     // once one is actually loaded (see updatePresetDisplay()).
     juce::TextButton quickSaveButton { "Save" };

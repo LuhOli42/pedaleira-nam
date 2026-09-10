@@ -1,5 +1,6 @@
 #include "MainComponent.h"
 
+#include "PedaleiraLookAndFeel.h"
 #include "PresetListDialog.h"
 #include "Tone3000Panel.h"
 #include "TouchSizing.h"
@@ -20,6 +21,11 @@ namespace
     // short lines of text, not an icon, and don't need a block-sized tile.
     constexpr int ioWidth = 56;
     constexpr int ioHeight = 50;
+
+    // Taller than touch::minTapTarget -- this is where the preset
+    // number/name live, and per the user's explicit ask they need to be
+    // readable from a few feet away on a stage, not just tappable.
+    constexpr int topBarHeight = 64;
 
     // The chain wraps into rows instead of scrolling sideways once it fills
     // the available width -- up to this many visible at once, matching the
@@ -55,15 +61,24 @@ MainComponent::MainComponent()
     registerBuiltInEffects (registry);
 
     addAndMakeVisible (presetBadge);
-    presetBadge.setColour (juce::TextButton::buttonColourId, juce::Colour (0xff1c1c1c));
-    presetBadge.setColour (juce::TextButton::textColourOffId, juce::Colours::lightgrey);
-    presetBadge.onClick = [this] { showPresetsPanel(); };
+    presetBadge.onClicked = [this] { showPresetsPanel(); };
 
     addChildComponent (quickSaveButton); // only shown once a preset is actually loaded -- see updatePresetDisplay()
     quickSaveButton.onClick = [this] { if (currentPresetName.isNotEmpty()) savePresetAs (currentPresetName); };
 
     addAndMakeVisible (titleLabel);
-    titleLabel.setFont (juce::Font (22.0f, juce::Font::bold));
+    titleLabel.setFont (juce::Font (juce::FontOptions (28.0f, juce::Font::bold)));
+
+    // The heavier display weight (Inter ExtraBold), not just "bold" --
+    // readable from a few feet away is the actual requirement here (this
+    // is a stage instrument), see PresetBadge.h and AGENT.md's UI/UX
+    // Design Philosophy. Falls back to ordinary bold if the LookAndFeel
+    // set up in Main.cpp somehow isn't a PedaleiraLookAndFeel.
+    if (auto* laf = dynamic_cast<PedaleiraLookAndFeel*> (&juce::LookAndFeel::getDefaultLookAndFeel()))
+    {
+        presetBadge.setDisplayTypeface (laf->getExtraBoldTypeface());
+        titleLabel.setFont (juce::Font (juce::FontOptions (28.0f).withTypeface (laf->getExtraBoldTypeface())));
+    }
 
     addAndMakeVisible (cpuLabel);
     cpuLabel.setJustificationType (juce::Justification::centredRight);
@@ -111,7 +126,7 @@ MainComponent::MainComponent()
     outputSelector.onSelectionChanged = [this] (int index) { audioEngine.setOutputChannelPair (index * 2); };
 
     layoutChain();
-    setSize (1000, 640); // tall enough for 4 chain rows plus the parameter drawer without clipping
+    setSize (1000, 660); // tall enough for the (now bigger) top bar, 4 chain rows, and the parameter drawer without clipping
     startTimer (200);
 }
 
@@ -398,8 +413,7 @@ void MainComponent::savePresetAs (const juce::String& name)
 
 void MainComponent::updatePresetDisplay()
 {
-    presetBadge.setButtonText (currentPresetNumber > 0 ? juce::String (currentPresetNumber)
-                                                         : juce::String::fromUTF8 ("\xe2\x80\x94"));
+    presetBadge.setNumber (currentPresetNumber);
     titleLabel.setText (currentPresetName.isNotEmpty() ? currentPresetName : "No preset loaded",
                          juce::dontSendNotification);
     quickSaveButton.setVisible (currentPresetName.isNotEmpty());
@@ -496,17 +510,19 @@ void MainComponent::resized()
 
     auto area = getLocalBounds().reduced (12);
 
-    // At least touch::minTapTarget tall -- settingsButton and presetBadge
-    // are tap targets, not just labels, same rule as everything else.
-    auto top = area.removeFromTop (touch::minTapTarget);
-    cpuLabel.setBounds (top.removeFromRight (70));
-    settingsButton.setBounds (top.removeFromRight (touch::minTapTarget));
+    // Tall enough for a stage-readable preset number/name (see
+    // topBarHeight's comment) -- cpuLabel/settingsButton/quickSaveButton
+    // don't need to be that tall themselves, just centred within it.
+    auto top = area.removeFromTop (topBarHeight);
+    cpuLabel.setBounds (top.removeFromRight (70).withSizeKeepingCentre (70, 20));
+    settingsButton.setBounds (top.removeFromRight (touch::minTapTarget)
+                                   .withSizeKeepingCentre (touch::minTapTarget, touch::minTapTarget));
     top.removeFromRight (8);
-    presetBadge.setBounds (top.removeFromLeft (touch::minTapTarget + 8));
+    presetBadge.setBounds (top.removeFromLeft (80));
     top.removeFromLeft (8);
     if (quickSaveButton.isVisible())
     {
-        quickSaveButton.setBounds (top.removeFromRight (70));
+        quickSaveButton.setBounds (top.removeFromRight (80).withSizeKeepingCentre (80, touch::minTapTarget));
         top.removeFromRight (8);
     }
     titleLabel.setBounds (top);
@@ -539,7 +555,7 @@ void MainComponent::resized()
     int panelHeight = 0;
     if (selectedProcessor != nullptr)
     {
-        constexpr int floorForOneKnobRow = 260; // header rows (now touch::minTapTarget-tall) + exactly one row of knobs
+        constexpr int floorForOneKnobRow = 280; // header rows (touch::minTapTarget-tall) + exactly one (now bigger) row of knobs
         const int cap = juce::jmax ((int) (getHeight() * 0.25f), floorForOneKnobRow);
         const int preferred = parameterPanel.getPreferredContentHeight (area.getWidth());
         panelHeight = juce::jmin (area.getHeight(), juce::jmin (preferred, cap));

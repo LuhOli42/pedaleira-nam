@@ -8,6 +8,20 @@
 namespace pedaleira
 {
 
+namespace
+{
+    // Shared between getPreferredContentHeight() and resized() -- they
+    // have to agree exactly, or the drawer sizes itself for a knob grid
+    // different from the one actually laid out (that mismatch is exactly
+    // what caused clipping/pointless-scrolling before, see AGENT.md).
+    // Sized generously rather than at TouchSizing.h's bare minimum: a
+    // rotary knob needs real drag travel to feel controllable by finger,
+    // not just be technically tappable.
+    constexpr int knobCellWidth = 110;
+    constexpr int knobCellHeight = 126;
+    constexpr int knobDiameter = 84;
+}
+
 ParameterPanel::ParameterPanel()
 {
     addAndMakeVisible (titleLabel);
@@ -95,7 +109,7 @@ void ParameterPanel::rebuildForCurrentProcessor()
                 row.param = floatParam;
                 row.slider = std::make_unique<juce::Slider> (juce::Slider::RotaryHorizontalVerticalDrag,
                                                                juce::Slider::TextBoxBelow);
-                row.slider->setTextBoxStyle (juce::Slider::TextBoxBelow, false, 64, 16);
+                row.slider->setTextBoxStyle (juce::Slider::TextBoxBelow, false, 80, 20);
 
                 row.label = std::make_unique<juce::Label> (juce::String(), floatParam->getName (64));
                 row.label->setJustificationType (juce::Justification::centred);
@@ -216,12 +230,10 @@ int ParameterPanel::getPreferredContentHeight (int availableWidth) const
         height += touch::minTapTarget;  // browse/search row
     height += 8;                        // gap before the knob grid
 
-    constexpr int cellWidth = 92;
-    constexpr int cellHeight = 106;
-    const int knobAreaWidth = juce::jmax (cellWidth, availableWidth - 20);
-    const int columns = juce::jmax (1, knobAreaWidth / cellWidth);
+    const int knobAreaWidth = juce::jmax (knobCellWidth, availableWidth - 20);
+    const int columns = juce::jmax (1, knobAreaWidth / knobCellWidth);
     const int rows = sliders.empty() ? 0 : (int) ((sliders.size() + (size_t) columns - 1) / (size_t) columns);
-    height += rows * cellHeight;
+    height += rows * knobCellHeight;
 
     return height;
 }
@@ -257,12 +269,8 @@ void ParameterPanel::resized()
     // is narrow. Laid out inside knobGridHost (not this panel directly) so
     // a processor with more knobs than fit in the drawer's capped height
     // scrolls instead of getting clipped off -- see ParameterPanel.h.
-    constexpr int cellWidth = 92;
-    constexpr int cellHeight = 106;
-    constexpr int knobSize = 66;
-
-    const int hostWidth = juce::jmax (cellWidth, knobViewport.getWidth());
-    const int columns = juce::jmax (1, hostWidth / cellWidth);
+    const int hostWidth = juce::jmax (knobCellWidth, knobViewport.getWidth());
+    const int columns = juce::jmax (1, hostWidth / knobCellWidth);
 
     int x = 0;
     int y = 0;
@@ -274,17 +282,17 @@ void ParameterPanel::resized()
         {
             col = 0;
             x = 0;
-            y += cellHeight;
+            y += knobCellHeight;
         }
 
-        row.label->setBounds (x, y, cellWidth, 16);
-        row.slider->setBounds (x + (cellWidth - knobSize) / 2, y + 18, knobSize, knobSize + 22);
-        x += cellWidth;
+        row.label->setBounds (x, y, knobCellWidth, 18);
+        row.slider->setBounds (x + (knobCellWidth - knobDiameter) / 2, y + 20, knobDiameter, knobDiameter + 22);
+        x += knobCellWidth;
         ++col;
     }
 
     const int totalRows = sliders.empty() ? 0 : (int) ((sliders.size() + (size_t) columns - 1) / (size_t) columns);
-    knobGridHost.setSize (hostWidth, totalRows * cellHeight);
+    knobGridHost.setSize (hostWidth, totalRows * knobCellHeight);
 }
 
 void ParameterPanel::paint (juce::Graphics& g)
