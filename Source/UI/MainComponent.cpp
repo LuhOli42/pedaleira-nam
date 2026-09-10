@@ -18,14 +18,24 @@ MainComponent::MainComponent()
 {
     registerBuiltInEffects (registry);
 
+    addAndMakeVisible (presetBadge);
+    presetBadge.setJustificationType (juce::Justification::centred);
+    presetBadge.setFont (juce::Font (20.0f, juce::Font::bold));
+    presetBadge.setColour (juce::Label::textColourId, juce::Colours::grey);
+    presetBadge.setColour (juce::Label::backgroundColourId, juce::Colour (0xff1c1c1c));
+
     addAndMakeVisible (titleLabel);
     titleLabel.setFont (juce::Font (22.0f, juce::Font::bold));
 
     addAndMakeVisible (cpuLabel);
     cpuLabel.setJustificationType (juce::Justification::centredRight);
 
-    addAndMakeVisible (tone3000Button);
-    tone3000Button.onClick = [this] { showTone3000Panel(); };
+    addAndMakeVisible (settingsButton);
+    settingsButton.onClick = [this] { showSettingsPanel(); };
+
+    // Not made visible -- OverlayHost manages its own visibility as cards
+    // get pushed/popped (see AGENT.md's UI/UX Design Philosophy).
+    addChildComponent (overlayHost);
 
     chainViewport.setViewedComponent (&chainContainer, false);
     chainViewport.setScrollBarsShown (false, true);
@@ -45,6 +55,8 @@ MainComponent::MainComponent()
     parameterPanel.onRemoveRequested = [this] (EffectProcessor* p) { removeEffect (p); };
     parameterPanel.setModelsDirectory (getModelsDirectory());
     parameterPanel.setTone3000Manager (tone3000);
+    parameterPanel.onPushOverlay = [this] (std::unique_ptr<juce::Component> c) { overlayHost.pushOverlay (std::move (c)); };
+    parameterPanel.onPopOverlay  = [this] { overlayHost.popOverlay(); };
     addAndMakeVisible (parameterPanel);
 
     if (! audioEngine.start())
@@ -58,13 +70,11 @@ MainComponent::MainComponent()
     inputSelector.onSelectionChanged = [this] (int index) { audioEngine.setInputChannel (index); };
 
     addAndMakeVisible (outputSelector);
-    outputSelector.setOptions ({ "Stereo (L+R)", "Left only", "Right only" }, 0);
-    outputSelector.onSelectionChanged = [this] (int index)
-    {
-        audioEngine.setOutputRouting (index == 1 ? AudioEngine::OutputRouting::leftOnly
-                                       : index == 2 ? AudioEngine::OutputRouting::rightOnly
-                                                     : AudioEngine::OutputRouting::both);
-    };
+    auto outputNames = audioEngine.getAvailableOutputPairNames();
+    if (outputNames.isEmpty())
+        outputNames.add ("Default");
+    outputSelector.setOptions (outputNames, audioEngine.getOutputChannelPair() / 2);
+    outputSelector.onSelectionChanged = [this] (int index) { audioEngine.setOutputChannelPair (index * 2); };
 
     layoutChain();
     setSize (960, 560);
@@ -134,6 +144,7 @@ void MainComponent::selectBlock (EffectProcessor* processor)
         block->setSelected (&block->processor == processor);
 
     parameterPanel.setProcessor (processor);
+    resized(); // the detail drawer only exists (and only takes up space) once something is selected
 }
 
 void MainComponent::rebuildSignalGraph()
@@ -217,28 +228,18 @@ juce::File MainComponent::getModelsDirectory() const
                .getChildFile ("models");
 }
 
-void MainComponent::showTone3000Panel()
+void MainComponent::showSettingsPanel()
 {
-    // Just login/key now -- search and download live in ParameterPanel,
-    // contextual to whichever block is selected. See Tone3000Panel.h.
+    // The app's one Settings screen, reached through the "..." button --
+    // just login/key right now, search and download live in ParameterPanel,
+    // contextual to whichever block is selected. See Tone3000Panel.h and
+    // AGENT.md's UI/UX Design Philosophy for why this is a card pushed onto
+    // overlayHost rather than a separate OS window.
     auto panel = std::make_unique<Tone3000Panel> (tone3000);
-    auto* panelPtr = panel.get();
+    panel->onPushOverlay = [this] (std::unique_ptr<juce::Component> c) { overlayHost.pushOverlay (std::move (c)); };
+    panel->onPopOverlay  = [this] { overlayHost.popOverlay(); };
 
-    juce::DialogWindow::LaunchOptions options;
-    options.content.setOwned (panel.release());
-    options.dialogTitle = "TONE3000";
-    options.dialogBackgroundColour = juce::Colour (0xff141414);
-    options.escapeKeyTriggersCloseButton = true;
-    // JUCE-drawn decorations, not native -- same reasoning as MainWindow:
-    // native decorations forwarded through distrobox/Wayland are the
-    // suspected reason the main window's close button was easy to hit
-    // unintentionally, and here they apparently made the dialog un-closable
-    // (no working title bar at all) instead.
-    options.useNativeTitleBar = false;
-    options.resizable = true;
-
-    auto* window = options.launchAsync();
-    panelPtr->onRequestClose = [window] { if (window != nullptr) window->exitModalState (0); };
+    overlayHost.pushOverlay (std::move (panel));
 }
 
 void MainComponent::timerCallback()
@@ -256,11 +257,16 @@ void MainComponent::timerCallback()
 
 void MainComponent::resized()
 {
+    overlayHost.setBounds (getLocalBounds());
+
     auto area = getLocalBounds().reduced (12);
 
     auto top = area.removeFromTop (32);
-    cpuLabel.setBounds (top.removeFromRight (120));
-    tone3000Button.setBounds (top.removeFromRight (110).reduced (4, 0));
+    cpuLabel.setBounds (top.removeFromRight (70));
+    settingsButton.setBounds (top.removeFromRight (36));
+    top.removeFromRight (8);
+    presetBadge.setBounds (top.removeFromLeft (44));
+    top.removeFromLeft (8);
     titleLabel.setBounds (top);
 
     area.removeFromTop (8);
@@ -273,7 +279,15 @@ void MainComponent::resized()
     layoutChain();
 
     area.removeFromTop (8);
-    parameterPanel.setBounds (area);
+
+    // The detail drawer only exists once a block is selected, and even
+    // then it's capped at a quarter of the window -- this used to fill all
+    // remaining space like a desktop utility panel, which is exactly what
+    // AGENT.md's UI/UX Design Philosophy says a pedalboard shouldn't do.
+    const int maxPanelHeight = (int) (getHeight() * 0.25f);
+    const int panelHeight = selectedProcessor != nullptr ? juce::jmin (area.getHeight(), maxPanelHeight) : 0;
+    parameterPanel.setBounds (area.removeFromBottom (panelHeight));
+    parameterPanel.setVisible (panelHeight > 0);
 }
 
 void MainComponent::paint (juce::Graphics& g)

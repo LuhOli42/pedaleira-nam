@@ -12,12 +12,19 @@ namespace pedaleira
 {
 
 /**
-    TONE3000 account surface: paste your publishable client_id, log in.
-    That's all this does now -- searching and downloading models moved
-    into ParameterPanel itself, contextual to whichever block is selected
-    (a Neural Amp block searches amps, a Cab block searches cabs, etc.),
-    rather than a separate generic dialog you'd have to cross-reference by
-    hand. See GearRouting.h::gearFilterForProcessorName.
+    The app's one Settings screen (per AGENT.md's UI/UX Design Philosophy:
+    a pedalboard has exactly one settings surface, reached through the "..."
+    button, not a scatter of separate dialogs). Right now it only holds the
+    TONE3000 account section -- paste your publishable client_id, log in --
+    but it's the reserved home for whatever else needs a settings surface
+    later. Searching/downloading models is NOT here: that stays contextual
+    to whichever block is selected (see ParameterPanel and
+    GearRouting.h::gearFilterForProcessorName).
+
+    Shown through OverlayHost, not a juce::DialogWindow -- there's no
+    window manager to hand a second window to on the final touchscreen
+    target, so every "screen" is a card drawn on top of the single app
+    window instead.
 */
 class Tone3000Panel : public juce::Component
 {
@@ -27,14 +34,18 @@ public:
     void resized() override;
     void paint (juce::Graphics& g) override;
 
-    std::function<void()> onRequestClose;
+    /** Wired by whoever hosts this panel to OverlayHost::pushOverlay/popOverlay. */
+    std::function<void (std::unique_ptr<juce::Component>)> onPushOverlay;
+    std::function<void()> onPopOverlay;
 
 private:
     void refreshLoginState();
     void doLogin();
 
     Tone3000Manager& manager;
-    std::unique_ptr<OAuthLoginDialog> loginDialog;
+
+    juce::Label titleLabel { {}, "Settings" };
+    juce::Label tone3000SectionLabel { {}, "TONE3000 account" };
 
     juce::Label clientIdLabel { {}, "client_id" };
     juce::TextEditor clientIdField;

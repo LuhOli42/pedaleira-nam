@@ -6,6 +6,13 @@ namespace pedaleira
 Tone3000Panel::Tone3000Panel (Tone3000Manager& managerToUse)
     : manager (managerToUse)
 {
+    addAndMakeVisible (titleLabel);
+    titleLabel.setFont (juce::Font (20.0f, juce::Font::bold));
+
+    addAndMakeVisible (tone3000SectionLabel);
+    tone3000SectionLabel.setFont (juce::Font (14.0f, juce::Font::bold));
+    tone3000SectionLabel.setColour (juce::Label::textColourId, juce::Colours::lightgrey);
+
     addAndMakeVisible (clientIdLabel);
 
     addAndMakeVisible (clientIdField);
@@ -29,10 +36,10 @@ Tone3000Panel::Tone3000Panel (Tone3000Manager& managerToUse)
     statusLabel.setColour (juce::Label::textColourId, juce::Colours::lightgrey);
 
     addAndMakeVisible (closeButton);
-    closeButton.onClick = [this] { if (onRequestClose) onRequestClose(); };
+    closeButton.onClick = [this] { if (onPopOverlay) onPopOverlay(); };
 
     refreshLoginState();
-    setSize (420, 210);
+    setSize (720, 520); // clamped by OverlayHost to fit the app window -- this is the "whole screen" settings surface
 }
 
 void Tone3000Panel::refreshLoginState()
@@ -63,16 +70,19 @@ void Tone3000Panel::doLogin()
 
     // Embedded in-app browser, not the system one -- see OAuthLoginDialog
     // and Tone3000Manager's class comment for why: this is the only login
-    // flow that also works on the final touchscreen target.
-    loginDialog = std::make_unique<OAuthLoginDialog> (authorizeUrl, manager.getRedirectUri());
+    // flow that also works on the final touchscreen target. Shown as a
+    // further overlay layer on top of this panel, not a second window.
+    auto dialog = std::make_unique<OAuthLoginDialog> (authorizeUrl, manager.getRedirectUri());
+    auto* dialogPtr = dialog.get();
 
-    loginDialog->onRedirectReached = [this] (const juce::StringPairArray& params)
+    dialogPtr->onRedirectReached = [this] (const juce::StringPairArray& params)
     {
         const auto code = params["code"];
         const auto state = params["state"];
         const auto oauthError = params["error"];
 
-        loginDialog.reset();
+        if (onPopOverlay)
+            onPopOverlay(); // back to this panel
 
         if (oauthError.isNotEmpty())
         {
@@ -89,16 +99,26 @@ void Tone3000Panel::doLogin()
         });
     };
 
-    loginDialog->onCancelled = [this]
+    dialogPtr->onCancelled = [this]
     {
-        loginDialog.reset();
+        if (onPopOverlay)
+            onPopOverlay();
         statusLabel.setText ("Login cancelled.", juce::dontSendNotification);
     };
+
+    if (onPushOverlay)
+        onPushOverlay (std::move (dialog));
 }
 
 void Tone3000Panel::resized()
 {
-    auto area = getLocalBounds().reduced (12);
+    auto area = getLocalBounds().reduced (16);
+
+    titleLabel.setBounds (area.removeFromTop (32));
+    area.removeFromTop (10);
+
+    tone3000SectionLabel.setBounds (area.removeFromTop (20));
+    area.removeFromTop (6);
 
     auto keyRow = area.removeFromTop (28);
     clientIdLabel.setBounds (keyRow.removeFromLeft (70));
@@ -109,12 +129,12 @@ void Tone3000Panel::resized()
 
     auto loginRow = area.removeFromTop (28);
     loginButton.setBounds (loginRow.removeFromLeft (110));
-    logoutButton.setBounds (loginRow.getX() - 110, loginRow.getY(), 110, loginRow.getHeight());
+    logoutButton.setBounds (loginRow.getX(), loginRow.getY(), 110, loginRow.getHeight());
 
     area.removeFromTop (10);
     statusLabel.setBounds (area.removeFromTop (44));
 
-    closeButton.setBounds (area.removeFromBottom (30).removeFromRight (90));
+    closeButton.setBounds (area.removeFromBottom (34).removeFromRight (100));
 }
 
 void Tone3000Panel::paint (juce::Graphics& g)

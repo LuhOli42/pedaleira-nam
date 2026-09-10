@@ -3,6 +3,7 @@
 #include "ChainContainer.h"
 #include "EffectBlockComponent.h"
 #include "IOSelectorBlock.h"
+#include "OverlayHost.h"
 #include "ParameterPanel.h"
 #include "../EffectRegistry.h"
 #include "../Engine/AudioEngine.h"
@@ -50,7 +51,7 @@ private:
     void rebuildSignalGraph();
     void layoutChain();
     void showAddEffectMenu (int insertAtIndex = -1);
-    void showTone3000Panel();
+    void showSettingsPanel();
     juce::File getModelsDirectory() const;
 
     void timerCallback() override;
@@ -81,9 +82,19 @@ private:
     IOSelectorBlock outputSelector { "OUT" };
 
     ParameterPanel parameterPanel;
+
+    // Reserves the layout slot for the future preset system (see AGENT.md) --
+    // not interactive yet, just here so the chain/panel below don't have to
+    // be reshuffled again once presets exist.
+    juce::Label presetBadge { {}, juce::String::fromUTF8 ("\xe2\x80\x94") }; // em dash placeholder
     juce::Label titleLabel { {}, "Pedaleira NAM" };
     juce::Label cpuLabel;
-    juce::TextButton tone3000Button { "TONE3000" };
+    juce::TextButton settingsButton { juce::String::fromUTF8 ("\xe2\x8b\xae") }; // vertical ellipsis "..."
+
+    // Every popup that used to be a separate OS window (TONE3000 login,
+    // search, installed-model list) is a card drawn on top of this window
+    // instead -- see OverlayHost and AGENT.md's UI/UX Design Philosophy.
+    OverlayHost overlayHost;
 };
 
 } // namespace pedaleira

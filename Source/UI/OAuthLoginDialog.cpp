@@ -6,10 +6,13 @@ namespace pedaleira
 {
 
 OAuthLoginDialog::OAuthLoginDialog (const juce::String& authorizeUrl, const juce::String& redirectUriPrefix)
-    : DocumentWindow ("TONE3000 Login", juce::Colours::black, DocumentWindow::closeButton)
-    , redirectPrefix (redirectUriPrefix)
+    : redirectPrefix (redirectUriPrefix)
 {
-    setUsingNativeTitleBar (false);
+    addAndMakeVisible (titleLabel);
+    titleLabel.setFont (juce::Font (16.0f, juce::Font::bold));
+
+    addAndMakeVisible (cancelButton);
+    cancelButton.onClick = [this] { if (onCancelled) onCancelled(); };
 
     browser.onPageAboutToLoad = [this] (const juce::String& url) -> bool
     {
@@ -30,7 +33,7 @@ OAuthLoginDialog::OAuthLoginDialog (const juce::String& authorizeUrl, const juce
 
         // Deferred: we're inside the webview's own navigation-decision
         // callback here, not a normal message-loop turn. Let that unwind
-        // first before the caller potentially deletes this window.
+        // first before the caller potentially deletes this overlay.
         if (onRedirectReached)
         {
             auto callback = onRedirectReached;
@@ -40,18 +43,27 @@ OAuthLoginDialog::OAuthLoginDialog (const juce::String& authorizeUrl, const juce
         return false; // cancel navigation -- we never actually load the redirect URI
     };
 
-    setContentNonOwned (&browser, true);
-    setResizable (true, false);
-    centreWithSize (480, 640);
-    setVisible (true);
+    addAndMakeVisible (browser);
+    setSize (480, 640);
 
     browser.goToURL (authorizeUrl);
 }
 
-void OAuthLoginDialog::closeButtonPressed()
+void OAuthLoginDialog::resized()
 {
-    if (onCancelled)
-        onCancelled();
+    auto area = getLocalBounds().reduced (10);
+
+    auto top = area.removeFromTop (28);
+    cancelButton.setBounds (top.removeFromRight (80));
+    titleLabel.setBounds (top);
+
+    area.removeFromTop (6);
+    browser.setBounds (area);
+}
+
+void OAuthLoginDialog::paint (juce::Graphics& g)
+{
+    g.fillAll (juce::Colour (0xff1a1a1a));
 }
 
 } // namespace pedaleira

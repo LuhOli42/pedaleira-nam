@@ -49,12 +49,27 @@ public:
     /** Which input channel of the currently open device feeds the chain (clamped to what's available). */
     void setInputChannel (int channelIndex) noexcept { selectedInputChannel.store (channelIndex, std::memory_order_relaxed); }
     int getInputChannel() const noexcept { return selectedInputChannel.load (std::memory_order_relaxed); }
+
+    /** One name per physical input channel the currently open device actually
+        has -- read live from the device every call, never a fixed/assumed
+        list, so a different interface (or none at all) never leaves a stale
+        option on screen. */
     juce::StringArray getAvailableInputChannelNames() const;
 
-    enum class OutputRouting { both, leftOnly, rightOnly };
-    void setOutputRouting (OutputRouting routing) noexcept { outputRouting.store (routing, std::memory_order_relaxed); }
-    OutputRouting getOutputRouting() const noexcept { return outputRouting.load (std::memory_order_relaxed); }
-    juce::StringArray getAvailableOutputChannelNames() const;
+    /** Index (0, 2, 4, ...) of the first channel of the selected OUTPUT PAIR.
+        Everything outside [pair, pair+1] is silenced after the graph runs;
+        every processor still always sees a full buffer to work with. This
+        replaced an abstract "stereo/left/right" choice that didn't reflect
+        the real device -- an interface with more than 2 outputs (e.g. a
+        6-channel audio interface) can only be pointed at one of its real
+        pairs, never an arbitrary/unbounded one. */
+    void setOutputChannelPair (int pairStartIndex) noexcept { selectedOutputPairStart.store (pairStartIndex, std::memory_order_relaxed); }
+    int getOutputChannelPair() const noexcept { return selectedOutputPairStart.load (std::memory_order_relaxed); }
+
+    /** One entry per available output PAIR of the currently open device,
+        e.g. {"Out 1/2", "Out 3/4", "Out 5/6"} for a 6-channel interface --
+        always sized to what the live device reports, never a synthetic list. */
+    juce::StringArray getAvailableOutputPairNames() const;
 
 private:
     void audioDeviceIOCallbackWithContext (const float* const* inputChannelData, int numInputChannels,
@@ -73,7 +88,7 @@ private:
     std::atomic<double> lastCpuUsage { 0.0 };
 
     std::atomic<int> selectedInputChannel { 0 };
-    std::atomic<OutputRouting> outputRouting { OutputRouting::both };
+    std::atomic<int> selectedOutputPairStart { 0 };
 };
 
 } // namespace pedaleira

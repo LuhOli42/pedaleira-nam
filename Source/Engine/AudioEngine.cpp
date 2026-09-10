@@ -90,11 +90,18 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
     if (auto* graph = graphSlot.currentRaw())
         graph->process (buffer);
 
-    const auto routing = outputRouting.load (std::memory_order_relaxed);
-    if (routing == OutputRouting::leftOnly && numOutputChannels > 1)
-        juce::FloatVectorOperations::clear (outputChannelData[1], numSamples);
-    else if (routing == OutputRouting::rightOnly && numOutputChannels > 0)
-        juce::FloatVectorOperations::clear (outputChannelData[0], numSamples);
+    // Silence every physical output channel outside the selected pair --
+    // clamped to what this device actually has, so a stale selection from a
+    // previously-connected interface with more outputs can never reach past
+    // the end of the current one's channel array.
+    if (numOutputChannels > 0)
+    {
+        const int pairStart = juce::jlimit (0, numOutputChannels - 1,
+                                             selectedOutputPairStart.load (std::memory_order_relaxed));
+        for (int ch = 0; ch < numOutputChannels; ++ch)
+            if (ch < pairStart || ch > pairStart + 1)
+                juce::FloatVectorOperations::clear (outputChannelData[ch], numSamples);
+    }
 
     const auto elapsedSeconds = juce::Time::highResolutionTicksToSeconds (
         juce::Time::getHighResolutionTicks() - startTicks);
@@ -117,11 +124,20 @@ juce::StringArray AudioEngine::getAvailableInputChannelNames() const
     return {};
 }
 
-juce::StringArray AudioEngine::getAvailableOutputChannelNames() const
+juce::StringArray AudioEngine::getAvailableOutputPairNames() const
 {
-    if (auto* device = deviceManager.getCurrentAudioDevice())
-        return device->getOutputChannelNames();
-    return {};
+    juce::StringArray pairs;
+    auto* device = deviceManager.getCurrentAudioDevice();
+    if (device == nullptr)
+        return pairs;
+
+    const auto count = device->getOutputChannelNames().size();
+    for (int i = 0; i < count; i += 2)
+    {
+        pairs.add (i + 1 < count ? "Out " + juce::String (i + 1) + "/" + juce::String (i + 2)
+                                  : "Out " + juce::String (i + 1));
+    }
+    return pairs;
 }
 
 } // namespace pedaleira

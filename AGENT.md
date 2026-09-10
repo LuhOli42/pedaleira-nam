@@ -77,6 +77,64 @@ Update this table when a phase is completed — don't let it silently go stale.
 - **TONE3000:** integrate via the official API (OAuth2+PKCE), but as an **optional** module under `Tone3000/` — commercial use on embedded hardware still has no contractual confirmation (see risks in `ARCHITECTURE.md` section I). Don't couple any core product feature to this integration.
 - **Phase 1 default sample rate/buffer:** 48 kHz, 128-sample block (~2.7 ms) — tightening as profiling allows, final round-trip target < 10 ms.
 
+## UI/UX Design Philosophy (don't reopen without a new reason)
+
+This is a standalone hardware pedalboard, not a desktop app that happens to
+run on a PC first. Every screen has to make sense on a browserless
+touchscreen with no window manager and no filesystem the player is ever
+meant to think about. Concretely, until Phase 7 replaces this dev GUI:
+
+- **No separate OS windows for anything but the app itself.** Login,
+  search, "browse installed gear" — all of it is a card drawn on top of
+  the single app window via `Source/UI/OverlayHost.h`, not a
+  `juce::DialogWindow`/`DocumentWindow`. `OverlayHost` supports stacking
+  (a card can open a further card on top of itself, e.g. TONE3000 login
+  opening its embedded browser) and dismisses the top card on an
+  outside tap, mobile-bottom-sheet style. The only real top-level
+  `DocumentWindow` in the whole app is `Main.cpp`'s `MainWindow` — that's
+  the actual app window and can't be anything else.
+- **No native file-open dialogs as the primary flow.** Picking an
+  installed model/IR is an in-app list (`Source/UI/ModelListDialog.h`),
+  not a folder browser — tap a row, it loads. An empty list is a normal
+  state with plain text ("Nothing installed yet"), not an error or a
+  blank menu. A native `juce::FileChooser` still exists as a single small
+  "Import from device" affordance for getting a file onto the PC
+  prototype at all; it is not something the design should route through
+  more than that one place, and it won't exist on the final device (gear
+  only ever arrives via TONE3000 search or a future companion app).
+- **The parameter/detail panel is a drawer, not a permanent toolbar.** It
+  only appears once a block is selected, and even then it's capped at
+  1/4 of the window height (`MainComponent::resized()`), never filling
+  whatever space is left like a desktop inspector panel. With nothing
+  selected it renders nothing at all — no title, no hint text, just the
+  flat background.
+- **Effect blocks are black by default with a strong outline in the
+  block's own category colour** (`EffectProcessor::getAccentColour()`),
+  not a solid colour fill — see `EffectBlockComponent::paint()`. The one
+  block currently open in the detail panel gets a light glaze of that
+  same colour so it's visually obvious which block the panel belongs to.
+  Bypassed blocks are flat grey, no category colour at all. Icons stay
+  white regardless of state (see the Quad Cortex Grid reference this is
+  modelled on).
+- **I/O selectors only ever list what the live hardware actually has.**
+  `AudioEngine::getAvailableInputChannelNames()` /
+  `getAvailableOutputPairNames()` read the currently-open device every
+  call — never a cached, hardcoded, or dev-machine-specific list. Output
+  routing is a choice of real channel *pairs* ("Out 1/2", "Out 3/4", ...),
+  not an abstract "stereo/left/right" concept that doesn't scale to an
+  interface with more than 2 outputs.
+- **The top bar reserves a preset-number slot** (`MainComponent`'s
+  `presetBadge`) even though presets aren't implemented yet (Phase 1
+  still has them not-started) — so that work, when it happens, has a
+  place to land instead of reshuffling the whole top bar again. It is a
+  placeholder only; don't wire real behaviour to it without also
+  implementing the preset system itself.
+- **Settings live in exactly one place**, reached through the "..."
+  button (`MainComponent::showSettingsPanel()`, `Source/UI/Tone3000Panel`
+  despite the filename — it's the app's general Settings screen, TONE3000
+  account is just its first section). Don't add a second top-level
+  settings surface; add a new section to this one.
+
 ## Code conventions
 
 - C++/JUCE, CMake as the build system.

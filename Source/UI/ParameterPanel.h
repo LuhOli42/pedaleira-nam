@@ -49,6 +49,13 @@ public:
 
     std::function<void (EffectProcessor*)> onRemoveRequested;
 
+    /** Wired by MainComponent to OverlayHost::pushOverlay/popOverlay -- see
+        AGENT.md's UI/UX Design Philosophy. Both the installed-models list
+        and the TONE3000 search go through these instead of opening a
+        separate OS window. */
+    std::function<void (std::unique_ptr<juce::Component>)> onPushOverlay;
+    std::function<void()> onPopOverlay;
+
 private:
     void rebuildForCurrentProcessor();
     void browseInstalledModels();
@@ -71,8 +78,6 @@ private:
         juce::AudioParameterFloat* param = nullptr;
     };
     std::vector<SliderRow> sliders;
-
-    std::unique_ptr<juce::FileChooser> fileChooser; // kept alive for the async picker
 };
 
 } // namespace pedaleira

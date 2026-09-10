@@ -38,7 +38,7 @@ Tone3000SearchDialog::Tone3000SearchDialog (Tone3000Manager& managerToUse, juce:
     downloadButton.onClick = [this] { doDownloadSelected(); };
 
     addAndMakeVisible (closeButton);
-    closeButton.onClick = [this] { if (onRequestClose) onRequestClose(); };
+    closeButton.onClick = [this] { if (onPopOverlay) onPopOverlay(); };
 
     addAndMakeVisible (statusLabel);
     statusLabel.setColour (juce::Label::textColourId, juce::Colours::lightgrey);

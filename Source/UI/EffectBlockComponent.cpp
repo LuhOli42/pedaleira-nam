@@ -53,13 +53,35 @@ void EffectBlockComponent::paint (juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat().reduced (3.0f);
     const bool bypassed = processor.isBypassed();
+    const auto accent = processor.getAccentColour();
 
-    const auto fill = bypassed ? juce::Colour (0xff2e2e2e) : processor.getAccentColour();
-    g.setColour (fill);
-    g.fillRoundedRectangle (bounds, 8.0f);
+    if (bypassed)
+    {
+        // Deactivated -- flat grey, no category colour at all.
+        g.setColour (juce::Colour (0xff2e2e2e));
+        g.fillRoundedRectangle (bounds, 8.0f);
+        g.setColour (juce::Colours::grey.withAlpha (0.6f));
+        g.drawRoundedRectangle (bounds, 8.0f, 1.5f);
+    }
+    else
+    {
+        // Active -- black by default, with a strong outline in the block's
+        // own category colour (see reference: Quad Cortex's Grid). The one
+        // block currently open in the parameter panel below gets a light
+        // glaze of that same colour so it's obvious which one you're
+        // editing, without needing a separate unrelated highlight colour.
+        g.setColour (juce::Colours::black);
+        g.fillRoundedRectangle (bounds, 8.0f);
 
-    g.setColour (selected ? juce::Colour (0xff6fe0c8) : juce::Colours::black.withAlpha (0.4f));
-    g.drawRoundedRectangle (bounds, 8.0f, selected ? 2.5f : 1.0f);
+        if (selected)
+        {
+            g.setColour (accent.withAlpha (0.35f));
+            g.fillRoundedRectangle (bounds, 8.0f);
+        }
+
+        g.setColour (accent);
+        g.drawRoundedRectangle (bounds, 8.0f, selected ? 3.0f : 2.0f);
+    }
 
     // Icon on top, name label along the bottom -- same two-zone layout as
     // the reference (Quad Cortex's Grid blocks): glyph first, text second.

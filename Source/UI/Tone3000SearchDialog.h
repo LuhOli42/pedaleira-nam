@@ -28,7 +28,11 @@ public:
 
     /** Fires once a result has been downloaded and is ready to load. */
     std::function<void (juce::File)> onFileReady;
-    std::function<void()> onRequestClose;
+
+    /** Wired by whoever hosts this dialog to OverlayHost::popOverlay -- see
+        AGENT.md's UI/UX Design Philosophy: this is a card on top of the app
+        window, not a juce::DialogWindow, so "close" just means "pop me". */
+    std::function<void()> onPopOverlay;
 
 private:
     void doSearch();

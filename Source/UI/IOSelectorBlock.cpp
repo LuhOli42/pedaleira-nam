@@ -34,20 +34,21 @@ void IOSelectorBlock::mouseUp (const juce::MouseEvent&)
 
 void IOSelectorBlock::paint (juce::Graphics& g)
 {
-    auto bounds = getLocalBounds().toFloat().reduced (3.0f);
+    // A plain, borderless pill -- same reference as the effect blocks
+    // (Quad Cortex's "In 1" / "Out 1/2" tiles): no outline, no icon, just
+    // the label on top and the current physical channel below it.
+    auto bounds = getLocalBounds().toFloat().reduced (4.0f);
 
-    g.setColour (juce::Colour (0xff262626));
-    g.fillRoundedRectangle (bounds, 8.0f);
-    g.setColour (juce::Colours::black.withAlpha (0.4f));
-    g.drawRoundedRectangle (bounds, 8.0f, 1.0f);
+    g.setColour (juce::Colour (0xff1c1c1c));
+    g.fillRoundedRectangle (bounds, 10.0f);
 
     g.setColour (juce::Colours::white);
-    g.setFont (12.5f);
-    g.drawFittedText (label, bounds.reduced (6.0f).toNearestInt(), juce::Justification::centredTop, 1);
+    g.setFont (14.0f);
+    g.drawFittedText (label, bounds.reduced (4.0f).toNearestInt(), juce::Justification::centredTop, 1);
 
     g.setColour (juce::Colours::lightgrey);
-    g.setFont (10.5f);
-    g.drawFittedText (selectionText, bounds.reduced (6.0f).toNearestInt(), juce::Justification::centred, 2);
+    g.setFont (11.5f);
+    g.drawFittedText (selectionText, bounds.reduced (4.0f).toNearestInt(), juce::Justification::centredBottom, 2);
 }
 
 } // namespace pedaleira

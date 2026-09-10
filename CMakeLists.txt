@@ -43,6 +43,8 @@ target_sources(PedaleiraNAM PRIVATE
   Source/UI/ChainContainer.cpp
   Source/UI/EffectBlockComponent.cpp
   Source/UI/IOSelectorBlock.cpp
+  Source/UI/ModelListDialog.cpp
+  Source/UI/OverlayHost.cpp
   Source/UI/ParameterPanel.cpp
   Source/UI/MainComponent.cpp
   Source/UI/Tone3000Panel.cpp

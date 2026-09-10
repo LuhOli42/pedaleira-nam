@@ -1,5 +1,6 @@
 #include "ParameterPanel.h"
 
+#include "ModelListDialog.h"
 #include "Tone3000SearchDialog.h"
 #include "../Tone3000/GearRouting.h"
 
@@ -56,7 +57,11 @@ void ParameterPanel::rebuildForCurrentProcessor()
 
     if (current == nullptr)
     {
-        titleLabel.setText ("No block selected -- click one in the chain above, or add one", juce::dontSendNotification);
+        // Nothing to show at all -- no title, no hint text, just the flat
+        // black background from paint(). Per AGENT.md's UI/UX Design
+        // Philosophy: this panel is a detail drawer that only exists once
+        // you've tapped a block, not a permanent toolbar with an idle state.
+        titleLabel.setText ({}, juce::dontSendNotification);
         statusLabel.setText ({}, juce::dontSendNotification);
         bypassToggle.setVisible (false);
         browseInstalledButton.setVisible (false);
@@ -128,79 +133,13 @@ void ParameterPanel::browseInstalledModels()
     folder.createDirectory();
 
     const auto wildcard = tone3000routing::fileWildcardForProcessorName (processorName);
-    const auto files = folder.findChildFiles (juce::File::findFiles, false, wildcard);
+    juce::Array<juce::File> files;
+    for (auto& f : folder.findChildFiles (juce::File::findFiles, false, wildcard))
+        files.add (f);
 
-    juce::PopupMenu menu;
-    for (int i = 0; i < files.size(); ++i)
-        menu.addItem (i + 1, files.getReference (i).getFileNameWithoutExtension());
+    auto dialog = std::make_unique<ModelListDialog> (processorName + " -- installed", files, folder, wildcard);
 
-    if (! files.isEmpty())
-        menu.addSeparator();
-
-    const int importItemId = files.size() + 1;
-    menu.addItem (importItemId, "Import from disk...");
-
-    menu.showMenuAsync (juce::PopupMenu::Options(),
-        [this, files, importItemId, wildcard, folder] (int result)
-        {
-            if (result <= 0 || current == nullptr)
-                return;
-
-            if (result == importItemId)
-            {
-                fileChooser = std::make_unique<juce::FileChooser> ("Select a file...", folder, wildcard);
-                fileChooser->launchAsync (
-                    juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
-                    [this] (const juce::FileChooser& chooser)
-                    {
-                        auto file = chooser.getResult();
-                        if (file != juce::File() && current != nullptr)
-                        {
-                            try
-                            {
-                                current->loadModelFile (file);
-                            }
-                            catch (const std::exception& e)
-                            {
-                                juce::AlertWindow::showMessageBoxAsync (
-                                    juce::MessageBoxIconType::WarningIcon, "Failed to load model", e.what());
-                            }
-                        }
-                        refresh();
-                    });
-                return;
-            }
-
-            if (result - 1 < files.size())
-            {
-                try
-                {
-                    current->loadModelFile (files.getReference (result - 1));
-                    refresh();
-                }
-                catch (const std::exception& e)
-                {
-                    juce::AlertWindow::showMessageBoxAsync (
-                        juce::MessageBoxIconType::WarningIcon, "Failed to load model", e.what());
-                }
-            }
-        });
-}
-
-void ParameterPanel::openTone3000Search()
-{
-    if (current == nullptr || tone3000 == nullptr)
-        return;
-
-    const juce::String processorName (current->getName());
-    const auto gearFilter = tone3000routing::gearFilterForProcessorName (processorName);
-    const auto subfolder = tone3000routing::subfolderForProcessorName (processorName);
-    const auto destinationFolder = subfolder.isNotEmpty() ? modelsDir.getChildFile (subfolder) : modelsDir;
-
-    auto dialog = std::make_unique<Tone3000SearchDialog> (*tone3000, gearFilter, destinationFolder);
-    auto* dialogPtr = dialog.get();
-
-    dialogPtr->onFileReady = [this] (juce::File file)
+    dialog->onFileChosen = [this] (juce::File file)
     {
         if (current == nullptr)
             return;
@@ -216,17 +155,44 @@ void ParameterPanel::openTone3000Search()
                 juce::MessageBoxIconType::WarningIcon, "Failed to load model", e.what());
         }
     };
+    dialog->onPopOverlay = [this] { if (onPopOverlay) onPopOverlay(); };
 
-    juce::DialogWindow::LaunchOptions options;
-    options.content.setOwned (dialog.release());
-    options.dialogTitle = "TONE3000 Search";
-    options.dialogBackgroundColour = juce::Colour (0xff141414);
-    options.escapeKeyTriggersCloseButton = true;
-    options.useNativeTitleBar = false; // JUCE-drawn decorations -- see MainWindow/Tone3000Panel for why
-    options.resizable = true;
+    if (onPushOverlay)
+        onPushOverlay (std::move (dialog));
+}
 
-    auto* window = options.launchAsync();
-    dialogPtr->onRequestClose = [window] { if (window != nullptr) window->exitModalState (0); };
+void ParameterPanel::openTone3000Search()
+{
+    if (current == nullptr || tone3000 == nullptr)
+        return;
+
+    const juce::String processorName (current->getName());
+    const auto gearFilter = tone3000routing::gearFilterForProcessorName (processorName);
+    const auto subfolder = tone3000routing::subfolderForProcessorName (processorName);
+    const auto destinationFolder = subfolder.isNotEmpty() ? modelsDir.getChildFile (subfolder) : modelsDir;
+
+    auto dialog = std::make_unique<Tone3000SearchDialog> (*tone3000, gearFilter, destinationFolder);
+
+    dialog->onFileReady = [this] (juce::File file)
+    {
+        if (current == nullptr)
+            return;
+
+        try
+        {
+            current->loadModelFile (file);
+            refresh();
+        }
+        catch (const std::exception& e)
+        {
+            juce::AlertWindow::showMessageBoxAsync (
+                juce::MessageBoxIconType::WarningIcon, "Failed to load model", e.what());
+        }
+    };
+    dialog->onPopOverlay = [this] { if (onPopOverlay) onPopOverlay(); };
+
+    if (onPushOverlay)
+        onPushOverlay (std::move (dialog));
 }
 
 void ParameterPanel::resized()
