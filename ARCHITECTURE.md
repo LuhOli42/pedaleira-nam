@@ -133,7 +133,7 @@ PedaleiraNAM/
 │   │   ├── DistortionProcessor.{h,cpp}
 │   │   ├── FuzzProcessor.{h,cpp}
 │   │   ├── EQProcessor.{h,cpp}
-│   │   ├── NAMProcessor.{h,cpp}         # realtime-safe wrapper over NeuralAudio/NAM Core
+│   │   ├── NAMProcessor.{h,cpp}         # realtime-safe wrapper over NeuralAmpModelerCore (nam::DSP)
 │   │   └── CabIRProcessor.{h,cpp}       # partitioned convolution
 │   ├── Models/
 │   │   ├── ModelRepository.{h,cpp}      # local library, metadata, checksum
@@ -198,7 +198,7 @@ Round-trip latency target (input → output, including the driver): **< 10 ms** 
 
 **Pedals:** Noise Gate, Compressor, Boost, Overdrive, Distortion, Fuzz, EQ — each an independent `EffectProcessor` (see Section C), with no state shared between instances.
 
-**NAM — inference engine:** primary choice is **NeuralAudio** (MIT, dedicated SIMD for RPi4/RPi5, compatible with `.nam` Standard/Lite/Feather/Nano models), with **NeuralAmpModelerCore** (MIT, official) as a reference/fallback. RTNeural is an option for lightweight LSTM models where Eigen's overhead isn't worth it. None of the three depend on an NPU — all processing is CPU-bound, with NEON where available.
+**NAM — inference engine:** implemented directly on **NeuralAmpModelerCore** (sdatkinson, upstream, MIT) — not NeuralAudio as originally scoped here, because NeuralAudio's CMake requires git submodules at fixed relative paths (not FetchContent-friendly) and its bundled test models are CC BY-NC-ND (unusable in a commercial test suite anyway). `NAMProcessor` wraps `nam::DSP`, with the model loaded on the control thread and handed to the audio thread through the same atomic-swap `DeferredReclaimer` pattern the SignalGraph itself uses. The same class serves both the amp position and a "neural drive" position (`NAMAmp`/`NeuralDrive` in `EffectRegistry`) — only the trained `.nam` file loaded into an instance differs. RTNeural remains an option for lightweight LSTM models later. None of these depend on an NPU — all processing is CPU-bound, with NEON where available.
 
 **Cab / IR:** **partitioned convolution** strategy — long IRs (>100ms) are too expensive with direct convolution, and "pure" FFT convolution introduces block latency incompatible with live use. JUCE already exposes `dsp::Convolution` with uniform partitioning built in — a real, not just theoretical, starting point for Phase 1.
 

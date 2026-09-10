@@ -55,8 +55,8 @@ Every new effect (pedal, modulation, delay, reverb, pitch, whatever) is a new `E
 
 | Phase | Status | Hardware |
 |---|---|---|
-| 0 — Architecture + JUCE/CMake skeleton | **in progress** | PC x86 |
-| 1 — Audio Engine + Pedals + NAM + Cab/IR + TONE3000 + Presets | not started | PC x86 |
+| 0 — Architecture + JUCE/CMake skeleton | **done** | PC x86 |
+| 1 — Audio Engine + Pedals + NAM + Cab/IR + TONE3000 + Presets | **in progress** (Gate/Compressor/Overdrive + NAMProcessor done; Cab/IR, TONE3000, Presets not started) | PC x86 |
 | 2 — Delay + Reverb | not started | PC x86 |
 | 3 — Modulation | not started | PC x86 |
 | 4 — Pitch | not started | PC x86 |
@@ -69,7 +69,9 @@ Update this table when a phase is completed — don't let it silently go stale.
 
 ## Decisions already made (don't reopen without a new reason)
 
-- **NAM engine:** `NeuralAudio` (mikeoliphant, MIT) as the primary backend — already has dedicated SIMD for RPi4/RPi5. `NeuralAmpModelerCore` (MIT, official) as reference/fallback. **Do not use AIDA-X or GuitarML code directly** — both GPL-3.0, license contamination in a closed-source product. Use them only as architectural reference, if needed.
+- **NAM engine:** `NeuralAmpModelerCore` (sdatkinson, upstream, MIT) directly — **not** `NeuralAudio` as originally planned. Reason for the change: `NeuralAudio`'s CMake hardcodes relative `../deps/...` paths populated only via git submodules, which isn't FetchContent-friendly, and its bundled test models are CC BY-NC-ND (not usable in a commercial product's test suite anyway). `NeuralAmpModelerCore` ships no CMake library target of its own either (see `cmake/NAMCore.cmake` for how `nam_core` is built from its sources), but integrates cleanly and its `example_models/lstm.nam` is MIT. **Do not use AIDA-X or GuitarML code directly** — both GPL-3.0, license contamination in a closed-source product. Use them only as architectural reference, if needed.
+- **`nam_core` must be a CMake `OBJECT` library, never `STATIC`.** NAM registers each architecture (LSTM, WaveNet, ...) into `get_dsp()`'s factory via a static-initializer side effect that no other code directly references by symbol — a real `.a` archive silently drops those translation units at link time (confirmed: `get_dsp()` threw "No config parser registered for architecture: LSTM" until this was fixed). `OBJECT` passes every `.o` straight into the final link with no archive pruning.
+- **`nam_core`'s Eigen dependency is pinned to an exact commit, not a tag** — see `cmake/NAMCore.cmake`. The obvious `3.4.1` release tag is missing `Eigen::placeholders::lastN`, which `NAM/lstm.h` needs; the pinned commit is the exact one NeuralAmpModelerCore's own `Dependencies/eigen` submodule vendors (checked via the GitHub API, not guessed). Don't "clean this up" to a tagged release without re-verifying the symbol exists.
 - **NPU:** don't count on it for NAM. RKNN/eIQ/VIP9000 have no confirmed support for causal/dilated Conv1D — all NAM processing is CPU-bound (NEON where available).
 - **IR convolution:** partitioned, via `juce::dsp::Convolution` as a starting point.
 - **TONE3000:** integrate via the official API (OAuth2+PKCE), but as an **optional** module under `Tone3000/` — commercial use on embedded hardware still has no contractual confirmation (see risks in `ARCHITECTURE.md` section I). Don't couple any core product feature to this integration.
