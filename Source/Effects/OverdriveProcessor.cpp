@@ -49,13 +49,20 @@ void OverdriveProcessor::process (juce::AudioBuffer<float>& buffer)
 
 void OverdriveProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
-    // A smooth S-curve -- see docs/icons/AGENT-icon-notes.md: this is the
-    // unified icon set's "Overdrive" glyph (Drive category).
+    // A soft-clipped waveform (~1.5 cycles, flattened peaks) -- see
+    // docs/icons/AGENT-icon-notes.md, matched against the user's actual
+    // reference sheet (docs/icons/reference-sheet.png): this is the unified
+    // icon set's "Overdrive" glyph (Drive category).
+    const auto pt = [&] (float u, float v)
+    {
+        return juce::Point<float> (b.getX() + u * b.getWidth(), b.getY() + v * b.getHeight());
+    };
+
     juce::Path p;
-    p.startNewSubPath (b.getX(), b.getBottom() - b.getHeight() * 0.15f);
-    p.cubicTo (b.getX() + b.getWidth() * 0.35f, b.getBottom() - b.getHeight() * 0.15f,
-               b.getX() + b.getWidth() * 0.65f, b.getY() + b.getHeight() * 0.15f,
-               b.getRight(), b.getY() + b.getHeight() * 0.15f);
+    p.startNewSubPath (pt (0.1667f, 0.5f));
+    p.cubicTo (pt (0.2708f, 0.1667f), pt (0.3542f, 0.1667f), pt (0.4167f, 0.5f));
+    p.cubicTo (pt (0.4792f, 0.8333f), pt (0.5625f, 0.8333f), pt (0.6667f, 0.5f));
+    p.cubicTo (pt (0.7708f, 0.1667f), pt (0.7708f, 0.1667f), pt (0.8333f, 0.5f));
 
     g.setColour (juce::Colours::white);
     g.strokePath (p, juce::PathStrokeType (2.2f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));

@@ -144,40 +144,44 @@ void IRLoaderProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) c
 
     if (isReverbRole())
     {
-        // Concentric rings -- the set's "Ambient" reverb glyph, the closest
-        // generic match while this role covers every IR-based space in one
-        // block (Hall/Plate/Room/... aren't separate blocks yet).
-        for (int i = 0; i < 3; ++i)
+        // A tall pointed arch -- the set's "Hall" reverb glyph, matched
+        // against the user's actual reference sheet
+        // (docs/icons/reference-sheet.png). This role covers every IR-based
+        // space in one block (Plate/Room/Spring/... aren't separate blocks
+        // yet), so Hall stands in as the one glyph. Replaces an earlier
+        // "concentric rings" guess (that was actually the set's Ambient
+        // glyph, not Hall's) -- see AGENT-icon-notes.md.
+        const auto pt = [&] (float u, float v)
         {
-            const float inset = juce::jmin (b.getWidth(), b.getHeight()) * (0.08f + 0.16f * (float) i);
-            g.drawEllipse (b.reduced (inset), 1.8f);
-        }
-        g.fillEllipse (b.getCentreX() - 2.5f, b.getCentreY() - 2.5f, 5.0f, 5.0f);
+            return juce::Point<float> (b.getX() + u * b.getWidth(), b.getY() + v * b.getHeight());
+        };
+
+        juce::Path arch;
+        arch.startNewSubPath (pt (0.1875f, 0.8125f));
+        arch.lineTo (pt (0.1875f, 0.4583f));
+        arch.quadraticTo (pt (0.1875f, 0.1875f), pt (0.5f, 0.1875f));
+        arch.quadraticTo (pt (0.8125f, 0.1875f), pt (0.8125f, 0.4583f));
+        arch.lineTo (pt (0.8125f, 0.8125f));
+
+        g.strokePath (arch, juce::PathStrokeType (1.8f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     }
     else
     {
-        // An isometric cube -- the set's "Cab" glyph.
-        const auto c = b.getCentre();
-        const float s = juce::jmin (b.getWidth(), b.getHeight()) * 0.42f;
-
-        juce::Point<float> pts[6];
-        for (int i = 0; i < 6; ++i)
-        {
-            const float angle = juce::MathConstants<float>::pi * (-0.5f + (float) i / 3.0f);
-            pts[i] = { c.x + s * std::cos (angle), c.y + s * std::sin (angle) };
-        }
-
-        juce::Path cube;
-        cube.startNewSubPath (pts[0]);
-        for (int i = 1; i < 6; ++i)
-            cube.lineTo (pts[i]);
-        cube.closeSubPath();
-
-        cube.startNewSubPath (c); cube.lineTo (pts[0]);
-        cube.startNewSubPath (c); cube.lineTo (pts[2]);
-        cube.startNewSubPath (c); cube.lineTo (pts[4]);
-
-        g.strokePath (cube, juce::PathStrokeType (1.6f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        // A box with a 2x2 speaker-grille dot pattern -- the set's "Cab"
+        // glyph, per the reference sheet (confirmed by the user: not an
+        // isometric cube, a square with four circles). Same shape/style as
+        // the cab half of NAMProcessor's "Neural Amp + Cab" icon, just
+        // filling the whole block instead of sitting under an amp head --
+        // see docs/icons/AGENT-icon-notes.md.
+        auto cabBox = b.reduced (b.getWidth() * 0.1f, b.getHeight() * 0.08f);
+        g.drawRoundedRectangle (cabBox, 2.0f, 1.8f);
+        for (int gx = -1; gx <= 1; gx += 2)
+            for (int gy = -1; gy <= 1; gy += 2)
+            {
+                const float x = cabBox.getCentreX() + (float) gx * cabBox.getWidth() * 0.22f;
+                const float y = cabBox.getCentreY() + (float) gy * cabBox.getHeight() * 0.22f;
+                g.fillEllipse (x - 3.0f, y - 3.0f, 6.0f, 6.0f);
+            }
     }
 }
 

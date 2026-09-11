@@ -66,23 +66,25 @@ void GateProcessor::process (juce::AudioBuffer<float>& buffer)
 
 void GateProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
-    // A horizontal line with a small square pulse in the middle (rise,
-    // flat top, fall) -- not a plain cross, corrected per user feedback --
-    // see docs/icons/AGENT-icon-notes.md: this is the unified icon set's
-    // "Noise Gate" glyph (Dinamica category), the gate opening then closing.
-    const float midY = b.getCentreY();
-    const float pulseTop = b.getY() + b.getHeight() * 0.15f;
+    // A gate post: a vertical line with a short crossbar near the top --
+    // see docs/icons/AGENT-icon-notes.md, matched against the user's actual
+    // reference sheet (docs/icons/reference-sheet.png) -- this is the
+    // unified icon set's "Noise Gate" glyph (Dinamica category).
+    const float w = b.getWidth();
+    const float h = b.getHeight();
 
-    juce::Path p;
-    p.startNewSubPath (b.getX(), midY);
-    p.lineTo (b.getX() + b.getWidth() * 0.32f, midY);
-    p.lineTo (b.getX() + b.getWidth() * 0.32f, pulseTop);
-    p.lineTo (b.getX() + b.getWidth() * 0.68f, pulseTop);
-    p.lineTo (b.getX() + b.getWidth() * 0.68f, midY);
-    p.lineTo (b.getRight(), midY);
+    juce::Path post;
+    post.startNewSubPath (b.getX() + w * 0.5f, b.getY() + h * 0.208f);
+    post.lineTo (b.getX() + w * 0.5f, b.getY() + h * 0.792f);
+
+    juce::Path crossbar;
+    crossbar.startNewSubPath (b.getX() + w * 0.333f, b.getY() + h * 0.375f);
+    crossbar.lineTo (b.getX() + w * 0.667f, b.getY() + h * 0.375f);
 
     g.setColour (juce::Colours::white);
-    g.strokePath (p, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    juce::PathStrokeType stroke (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded);
+    g.strokePath (post, stroke);
+    g.strokePath (crossbar, stroke);
 }
 
 } // namespace pedaleira
