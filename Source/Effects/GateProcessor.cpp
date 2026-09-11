@@ -1,4 +1,7 @@
 #include "GateProcessor.h"
+#include "IconKit.h"
+
+#include <IconData.h>
 
 namespace pedaleira
 {
@@ -66,25 +69,10 @@ void GateProcessor::process (juce::AudioBuffer<float>& buffer)
 
 void GateProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
-    // A gate post: a vertical line with a short crossbar near the top --
-    // see docs/icons/AGENT-icon-notes.md, matched against the user's actual
-    // reference sheet (docs/icons/reference-sheet.png) -- this is the
+    // See docs/icons/AGENT-icon-notes.md / Assets/Icons/gate.svg -- the
     // unified icon set's "Noise Gate" glyph (Dinamica category).
-    const float w = b.getWidth();
-    const float h = b.getHeight();
-
-    juce::Path post;
-    post.startNewSubPath (b.getX() + w * 0.5f, b.getY() + h * 0.208f);
-    post.lineTo (b.getX() + w * 0.5f, b.getY() + h * 0.792f);
-
-    juce::Path crossbar;
-    crossbar.startNewSubPath (b.getX() + w * 0.333f, b.getY() + h * 0.375f);
-    crossbar.lineTo (b.getX() + w * 0.667f, b.getY() + h * 0.375f);
-
-    g.setColour (juce::Colours::white);
-    juce::PathStrokeType stroke (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded);
-    g.strokePath (post, stroke);
-    g.strokePath (crossbar, stroke);
+    static const std::unique_ptr<juce::Drawable> svg = icon::loadSvg (IconData::gate_svg, IconData::gate_svgSize);
+    icon::drawSvg (g, b, svg.get());
 }
 
 } // namespace pedaleira

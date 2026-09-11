@@ -36,6 +36,29 @@ juce_add_binary_data(PedaleiraNAM_Fonts
     Assets/Fonts/Sora-ExtraBold.ttf
 )
 
+# Effect block icons -- embedded SVGs, not hand-transcribed juce::Path calls.
+# The first attempt at drawIcon() reimplemented each glyph's geometry by eye
+# from the approved reference-sheet prototype and drifted from it in several
+# ways per icon (stroke width, inset ratios, pin lengths, filled vs. outline
+# circles) -- see docs/icons/AGENT-icon-notes.md. Embedding the literal
+# approved SVG and rendering it with juce::Drawable guarantees the on-screen
+# glyph is pixel-identical to what got approved, the same reasoning as
+# embedding Sora above instead of hoping the OS font looks similar enough.
+juce_add_binary_data(PedaleiraNAM_Icons
+  NAMESPACE IconData
+  HEADER_NAME IconData.h
+  SOURCES
+    Assets/Icons/gate.svg
+    Assets/Icons/pulse.svg
+    Assets/Icons/overdrive.svg
+    Assets/Icons/neura_chip.svg
+    Assets/Icons/neura_chip_cab.svg
+    Assets/Icons/cab.svg
+    Assets/Icons/hall.svg
+    Assets/Icons/digital_delay.svg
+    Assets/Icons/ambient.svg
+)
+
 # A real (if dev-facing, pre-touch, pre-Phase-7) GUI, not a console app --
 # see AGENT.md: the user wants to SEE the chain being built, not just trust
 # test output. Still no presets/split-merge yet, on purpose.
@@ -120,6 +143,7 @@ target_link_libraries(PedaleiraNAM PRIVATE
   juce::juce_recommended_warning_flags
   nam_core
   PedaleiraNAM_Fonts
+  PedaleiraNAM_Icons
   CURL::libcurl
   PkgConfig::GTK3
   PkgConfig::WEBKIT2GTK

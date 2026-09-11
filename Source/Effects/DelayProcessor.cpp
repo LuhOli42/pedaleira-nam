@@ -1,4 +1,7 @@
 #include "DelayProcessor.h"
+#include "IconKit.h"
+
+#include <IconData.h>
 
 #include <cmath>
 
@@ -95,23 +98,11 @@ void DelayProcessor::process (juce::AudioBuffer<float>& buffer)
 
 void DelayProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
-    // Three dots decreasing in size -- see docs/icons/AGENT-icon-notes.md,
-    // matched against the user's reference sheet: the unified icon set's
-    // "Digital Delay" glyph (Delay category).
-    g.setColour (juce::Colours::white);
-
-    const float unit = juce::jmin (b.getWidth(), b.getHeight());
-    const float cy = b.getY() + b.getHeight() * 0.458f;
-
-    struct Dot { float xFrac; float rFrac; };
-    const Dot dots[] = { { 0.292f, 0.094f }, { 0.5f, 0.065f }, { 0.688f, 0.044f } };
-
-    for (auto& d : dots)
-    {
-        const float cx = b.getX() + b.getWidth() * d.xFrac;
-        const float r = d.rFrac * unit;
-        g.fillEllipse (cx - r, cy - r, r * 2.0f, r * 2.0f);
-    }
+    // See docs/icons/AGENT-icon-notes.md / Assets/Icons/digital_delay.svg
+    // -- the unified icon set's "Digital Delay" glyph (Delay category).
+    static const std::unique_ptr<juce::Drawable> svg =
+        icon::loadSvg (IconData::digital_delay_svg, IconData::digital_delay_svgSize);
+    icon::drawSvg (g, b, svg.get());
 }
 
 } // namespace pedaleira

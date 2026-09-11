@@ -33,24 +33,59 @@ coded against a class that doesn't exist.
 
 ## Rule for every effect's `drawIcon()`
 
-- White line art only (`juce::Colours::white`), 1.6–2.5px stroke. Small
-  filled dots are fine as accents (control knobs, footswitch, speaker
-  grille) — see NAM's amp/amp+cab/pedal glyphs.
-- The glyph communicates the effect TYPE, never the category colour or the
-  block's on/off state — `EffectBlockComponent::paint()` already handles
-  colour/border/bypass around it (see AGENT.md's UI/UX Design Philosophy).
-- Don't assume two roles of the same processor class share OR don't share a
-  glyph — check the sheet each time. This flip-flopped twice already: a
-  guessed-from-memory pass claimed Neura Amp and Neura Pedal use different
-  glyphs (amp-head-with-knobs vs. stompbox), then a corrected pass drew both
-  as the same bare chip, and the 2026-09-11 direct reading of the real sheet
-  confirmed the sheet genuinely does reuse one glyph across several related
-  effects on purpose (Neura Amp = Neura Amp+Cab's chip = Neura Pedal;
-  Compressor = Expander = IR Loader's pulse trace; Sustainer = Looper's
-  infinity symbol). Match the sheet's own reuse, don't assume either way.
-- Keep icons simple enough to draw as a handful of `juce::Path`/
-  `Graphics::drawLine`/`drawEllipse` calls — no bitmaps, no external asset
-  loading on the audio-adjacent UI thread.
+**Icons are embedded SVG assets (`Assets/Icons/*.svg`) drawn through
+`juce::Drawable`, not hand-written `juce::Path`/`Graphics::drawLine()` calls
+(changed 2026-09-11).** The first implementation reimplemented each glyph's
+geometry by eye from the approved SVG prototype, and drifted from it in
+several independent, compounding ways per icon — hardcoded pixel stroke
+widths that didn't scale with the icon's actual ~65-70px on-screen size
+(reading roughly half the intended weight), `drawLine()`'s flat/butt caps
+where the approved prototype used rounded caps+joins everywhere, wrong
+inset ratios (NAM chip drawn at a 16% box inset instead of the approved
+~27%), and a pin-length formula off by roughly 2x. Each one was individually
+minor; together they're exactly why the shipped icons read as noticeably
+worse than the HTML prototype the user approved, despite the shapes being
+"the same" in a code-review sense. There is no audio-thread concern here —
+`drawIcon()` only ever runs from `Component::paint()` on the UI thread, so
+"keep it simple to avoid bitmap loading" was never a real constraint, just
+an overcautious assumption.
+
+**To add a new icon:**
+1. Write an SVG matching the reference sheet: `viewBox="0 0 48 48"`,
+   `stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"
+   stroke-linejoin="round" fill="none"` on the root (override `fill`/
+   `stroke="none"` per-shape only for genuinely filled elements, e.g. a
+   speaker-grille dot or a filled note head), save it under `Assets/Icons/`.
+2. Validate it parses (`python3 -c "import xml.etree.ElementTree as ET;
+   ET.parse('Assets/Icons/yourfile.svg')"`) before wiring it in.
+3. Add the filename to `juce_add_binary_data(PedaleiraNAM_Icons ...)`'s
+   `SOURCES` in `CMakeLists.txt`, and to `Tests/CMakeLists.txt`'s
+   `PedaleiraNAM_Icons` link if the processor's `.cpp` is also compiled
+   into `PedaleiraNAM_Tests` (it always is, per the per-processor unit
+   test convention).
+4. In the processor's `drawIcon()`: `#include "IconKit.h"` and
+   `#include <IconData.h>`, then
+   `static const std::unique_ptr<juce::Drawable> svg =
+   icon::loadSvg (IconData::yourfile_svg, IconData::yourfile_svgSize);
+   icon::drawSvg (g, b, svg.get());` — see `Source/Effects/IconKit.h` and
+   any existing `drawIcon()` for the exact pattern. `IconData`'s symbol
+   names come from the filename with `.` replaced by `_` (JUCE's
+   `juce_add_binary_data` convention) — a hyphen or space in the filename
+   would need checking against the generated `IconData.h` directly.
+
+The glyph still communicates the effect TYPE, never the category colour or
+the block's on/off state — `EffectBlockComponent::paint()` already handles
+colour/border/bypass around it (see AGENT.md's UI/UX Design Philosophy).
+
+Don't assume two roles of the same processor class share OR don't share a
+glyph — check the sheet each time. This flip-flopped twice already: a
+guessed-from-memory pass claimed Neura Amp and Neura Pedal use different
+glyphs (amp-head-with-knobs vs. stompbox), then a corrected pass drew both
+as the same bare chip, and a direct reading of the real sheet confirmed it
+genuinely does reuse one glyph across several related effects on purpose
+(Neura Amp = Neura Amp+Cab's chip = Neura Pedal; Compressor = Expander =
+IR Loader's pulse trace; Sustainer = Looper's infinity symbol). Match the
+sheet's own reuse, don't assume either way.
 
 ## Categories and colours (as seen on the reference sheet)
 
@@ -71,20 +106,19 @@ once more effect classes exist and the palette can be centralised (e.g. a
 `GearRouting`-style category→colour table), rather than guessing a full
 palette now for effects that don't exist yet.
 
-## Glyphs implemented so far (mapped from the sheet, corrected 2026-09-11)
+## Glyphs implemented so far (mapped from the sheet, SVG assets since 2026-09-11)
 
-| Processor (chain role) | Category | Glyph used | File |
+| Processor (chain role) | Category | SVG asset | File |
 |---|---|---|---|
-| GateProcessor | Dinamica → Noise Gate | gate post: vertical line + short crossbar near the top | `Source/Effects/GateProcessor.cpp` |
-| CompressorProcessor | Dinamica → Compressor | heartbeat/ECG pulse (same trace as Expander and IR Loader's reverb role) | `Source/Effects/CompressorProcessor.cpp` |
-| OverdriveProcessor | Drive → Overdrive | soft-clipped waveform, ~1.5 cycles with flattened peaks (not a single sigmoid transfer curve) | `Source/Effects/OverdriveProcessor.cpp` |
-| NAMProcessor ("Neural Amp") | Amplificadores → Neura Amp | chip/IC glyph: square + circuit "face" (two dot eyes, curved smile) + one pin tick per side | `Source/Effects/NAMProcessor.cpp` |
-| NAMProcessor ("Neural Amp + Cab") | Amplificadores → Neura Amp + Cab | same chip (smaller) on top of a cab box with 2x2 speaker-grille dots | `Source/Effects/NAMProcessor.cpp` |
-| NAMProcessor ("Neural Pedal") | Amplificadores → Neura Pedal | same chip glyph as Neural Amp — the sheet reuses it, not a distinct stompbox shape | `Source/Effects/NAMProcessor.cpp` |
-| IRLoaderProcessor ("Cab") | Amplificadores → Cab | box + 2x2 speaker-grille dots | `Source/Effects/IRLoaderProcessor.cpp` |
-| IRLoaderProcessor ("Reverb") | Reverb → Hall | tall pointed arch (was wrongly drawn as Ambient's concentric rings — corrected 2026-09-11; this role covers every IR-based space in one block, so Hall stands in as the one glyph until Plate/Room/Spring/... are separate blocks) | `Source/Effects/IRLoaderProcessor.cpp` |
-| DelayProcessor | Delay → Digital Delay | 3 dots decreasing in size | `Source/Effects/DelayProcessor.cpp` |
-| ReverbProcessor ("Ambient") | Reverb → Ambient | 3 concentric circles | `Source/Effects/ReverbProcessor.cpp` |
+| GateProcessor | Dinamica → Noise Gate | `Assets/Icons/gate.svg` | `Source/Effects/GateProcessor.cpp` |
+| CompressorProcessor | Dinamica → Compressor | `Assets/Icons/pulse.svg` (heartbeat/ECG trace) | `Source/Effects/CompressorProcessor.cpp` |
+| OverdriveProcessor | Drive → Overdrive | `Assets/Icons/overdrive.svg` (soft-clipped waveform, ~1.5 cycles) | `Source/Effects/OverdriveProcessor.cpp` |
+| NAMProcessor ("Neural Amp" / "Neural Pedal") | Amplificadores → Neura Amp / Neura Pedal | `Assets/Icons/neura_chip.svg` (same glyph for both roles) | `Source/Effects/NAMProcessor.cpp` |
+| NAMProcessor ("Neural Amp + Cab") | Amplificadores → Neura Amp + Cab | `Assets/Icons/neura_chip_cab.svg` (chip over a cab box) | `Source/Effects/NAMProcessor.cpp` |
+| IRLoaderProcessor ("Cab") | Amplificadores → Cab | `Assets/Icons/cab.svg` (box + 2x2 outline circles) | `Source/Effects/IRLoaderProcessor.cpp` |
+| IRLoaderProcessor ("Reverb") | Reverb → Hall | `Assets/Icons/hall.svg` (tall pointed arch — this role covers every IR-based space in one block, so Hall stands in as the one glyph until Plate/Room/Spring/... are separate blocks) | `Source/Effects/IRLoaderProcessor.cpp` |
+| DelayProcessor | Delay → Digital Delay | `Assets/Icons/digital_delay.svg` (3 filled dots decreasing in size) | `Source/Effects/DelayProcessor.cpp` |
+| ReverbProcessor ("Ambient") | Reverb → Ambient | `Assets/Icons/ambient.svg` (3 concentric circles) | `Source/Effects/ReverbProcessor.cpp` |
 
 **Phase 2 note (2026-09-11):** `DelayProcessor`/`ReverbProcessor` are one
 representative processor per category, same approach as Phase 1's

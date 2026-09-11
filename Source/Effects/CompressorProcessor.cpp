@@ -1,4 +1,7 @@
 #include "CompressorProcessor.h"
+#include "IconKit.h"
+
+#include <IconData.h>
 
 namespace pedaleira
 {
@@ -79,20 +82,12 @@ void CompressorProcessor::process (juce::AudioBuffer<float>& buffer)
 
 void CompressorProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
-    // A heartbeat/ECG pulse -- see docs/icons/AGENT-icon-notes.md: this is
-    // the unified icon set's "Compressor" glyph (Dinamica category).
-    const float midY = b.getCentreY();
-
-    juce::Path p;
-    p.startNewSubPath (b.getX(), midY);
-    p.lineTo (b.getX() + b.getWidth() * 0.28f, midY);
-    p.lineTo (b.getX() + b.getWidth() * 0.38f, b.getY());
-    p.lineTo (b.getX() + b.getWidth() * 0.5f, b.getBottom());
-    p.lineTo (b.getX() + b.getWidth() * 0.62f, midY);
-    p.lineTo (b.getRight(), midY);
-
-    g.setColour (juce::Colours::white);
-    g.strokePath (p, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    // See docs/icons/AGENT-icon-notes.md / Assets/Icons/pulse.svg -- the
+    // unified icon set's "Compressor" glyph (Dinamica category). The sheet
+    // reuses this same pulse trace for Expander and IR Loader too, but
+    // neither of those exists as a distinct processor/role yet.
+    static const std::unique_ptr<juce::Drawable> svg = icon::loadSvg (IconData::pulse_svg, IconData::pulse_svgSize);
+    icon::drawSvg (g, b, svg.get());
 }
 
 } // namespace pedaleira

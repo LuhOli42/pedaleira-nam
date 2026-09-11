@@ -1,4 +1,7 @@
 #include "ReverbProcessor.h"
+#include "IconKit.h"
+
+#include <IconData.h>
 
 namespace pedaleira
 {
@@ -59,19 +62,10 @@ void ReverbProcessor::process (juce::AudioBuffer<float>& buffer)
 
 void ReverbProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
-    // Three concentric circles -- see docs/icons/AGENT-icon-notes.md,
-    // matched against the user's reference sheet: the unified icon set's
-    // "Ambient" glyph (Reverb category).
-    g.setColour (juce::Colours::white);
-
-    const float unit = juce::jmin (b.getWidth(), b.getHeight());
-    const auto c = b.getCentre();
-
-    for (float rFrac : { 0.125f, 0.375f, 0.646f })
-    {
-        const float r = rFrac * unit;
-        g.drawEllipse (c.x - r, c.y - r, r * 2.0f, r * 2.0f, 1.8f);
-    }
+    // See docs/icons/AGENT-icon-notes.md / Assets/Icons/ambient.svg --
+    // the unified icon set's "Ambient" glyph (Reverb category).
+    static const std::unique_ptr<juce::Drawable> svg = icon::loadSvg (IconData::ambient_svg, IconData::ambient_svgSize);
+    icon::drawSvg (g, b, svg.get());
 }
 
 } // namespace pedaleira

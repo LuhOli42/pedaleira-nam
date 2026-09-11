@@ -1,4 +1,7 @@
 #include "IRLoaderProcessor.h"
+#include "IconKit.h"
+
+#include <IconData.h>
 
 #include <cmath>
 
@@ -138,50 +141,18 @@ void IRLoaderProcessor::setState (const juce::XmlElement& state)
 
 void IRLoaderProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
-    // See docs/icons/AGENT-icon-notes.md for the unified icon set this
-    // follows.
-    g.setColour (juce::Colours::white);
-
+    // See docs/icons/AGENT-icon-notes.md / Assets/Icons/hall.svg
+    // (Reverb role) and cab.svg (Cab role) -- embedded SVGs, not
+    // hand-transcribed juce::Path calls; see IconKit.h for why.
     if (isReverbRole())
     {
-        // A tall pointed arch -- the set's "Hall" reverb glyph, matched
-        // against the user's actual reference sheet
-        // (docs/icons/reference-sheet.png). This role covers every IR-based
-        // space in one block (Plate/Room/Spring/... aren't separate blocks
-        // yet), so Hall stands in as the one glyph. Replaces an earlier
-        // "concentric rings" guess (that was actually the set's Ambient
-        // glyph, not Hall's) -- see AGENT-icon-notes.md.
-        const auto pt = [&] (float u, float v)
-        {
-            return juce::Point<float> (b.getX() + u * b.getWidth(), b.getY() + v * b.getHeight());
-        };
-
-        juce::Path arch;
-        arch.startNewSubPath (pt (0.1875f, 0.8125f));
-        arch.lineTo (pt (0.1875f, 0.4583f));
-        arch.quadraticTo (pt (0.1875f, 0.1875f), pt (0.5f, 0.1875f));
-        arch.quadraticTo (pt (0.8125f, 0.1875f), pt (0.8125f, 0.4583f));
-        arch.lineTo (pt (0.8125f, 0.8125f));
-
-        g.strokePath (arch, juce::PathStrokeType (1.8f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        static const std::unique_ptr<juce::Drawable> svg = icon::loadSvg (IconData::hall_svg, IconData::hall_svgSize);
+        icon::drawSvg (g, b, svg.get());
     }
     else
     {
-        // A box with a 2x2 speaker-grille dot pattern -- the set's "Cab"
-        // glyph, per the reference sheet (confirmed by the user: not an
-        // isometric cube, a square with four circles). Same shape/style as
-        // the cab half of NAMProcessor's "Neural Amp + Cab" icon, just
-        // filling the whole block instead of sitting under an amp head --
-        // see docs/icons/AGENT-icon-notes.md.
-        auto cabBox = b.reduced (b.getWidth() * 0.1f, b.getHeight() * 0.08f);
-        g.drawRoundedRectangle (cabBox, 2.0f, 1.8f);
-        for (int gx = -1; gx <= 1; gx += 2)
-            for (int gy = -1; gy <= 1; gy += 2)
-            {
-                const float x = cabBox.getCentreX() + (float) gx * cabBox.getWidth() * 0.22f;
-                const float y = cabBox.getCentreY() + (float) gy * cabBox.getHeight() * 0.22f;
-                g.fillEllipse (x - 3.0f, y - 3.0f, 6.0f, 6.0f);
-            }
+        static const std::unique_ptr<juce::Drawable> svg = icon::loadSvg (IconData::cab_svg, IconData::cab_svgSize);
+        icon::drawSvg (g, b, svg.get());
     }
 }
 

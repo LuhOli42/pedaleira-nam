@@ -43,6 +43,7 @@ target_link_libraries(PedaleiraNAM_Tests PRIVATE
   juce::juce_recommended_config_flags
   juce::juce_recommended_warning_flags
   nam_core
+  PedaleiraNAM_Icons
 )
 
 add_test(NAME PedaleiraNAM_UnitTests COMMAND PedaleiraNAM_Tests)
