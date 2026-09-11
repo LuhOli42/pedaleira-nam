@@ -12,6 +12,8 @@ target_sources(PedaleiraNAM_Tests PRIVATE
   CompressorProcessorTests.cpp
   OverdriveProcessorTests.cpp
   NAMProcessorTests.cpp
+  DelayProcessorTests.cpp
+  ReverbProcessorTests.cpp
   ../Source/EffectRegistry.cpp
   ../Source/Engine/SignalGraph.cpp
   ../Source/Engine/ParameterManager.cpp
@@ -20,6 +22,8 @@ target_sources(PedaleiraNAM_Tests PRIVATE
   ../Source/Effects/OverdriveProcessor.cpp
   ../Source/Effects/NAMProcessor.cpp
   ../Source/Effects/IRLoaderProcessor.cpp
+  ../Source/Effects/DelayProcessor.cpp
+  ../Source/Effects/ReverbProcessor.cpp
 )
 
 target_include_directories(PedaleiraNAM_Tests PRIVATE ../Source)

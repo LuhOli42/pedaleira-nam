@@ -83,6 +83,20 @@ palette now for effects that don't exist yet.
 | NAMProcessor ("Neural Pedal") | Amplificadores → Neura Pedal | same chip glyph as Neural Amp — the sheet reuses it, not a distinct stompbox shape | `Source/Effects/NAMProcessor.cpp` |
 | IRLoaderProcessor ("Cab") | Amplificadores → Cab | box + 2x2 speaker-grille dots | `Source/Effects/IRLoaderProcessor.cpp` |
 | IRLoaderProcessor ("Reverb") | Reverb → Hall | tall pointed arch (was wrongly drawn as Ambient's concentric rings — corrected 2026-09-11; this role covers every IR-based space in one block, so Hall stands in as the one glyph until Plate/Room/Spring/... are separate blocks) | `Source/Effects/IRLoaderProcessor.cpp` |
+| DelayProcessor | Delay → Digital Delay | 3 dots decreasing in size | `Source/Effects/DelayProcessor.cpp` |
+| ReverbProcessor ("Ambient") | Reverb → Ambient | 3 concentric circles | `Source/Effects/ReverbProcessor.cpp` |
+
+**Phase 2 note (2026-09-11):** `DelayProcessor`/`ReverbProcessor` are one
+representative processor per category, same approach as Phase 1's
+Gate/Compressor/Overdrive rather than building all 9 Delay + 10 Reverb
+variants from the sheet at once. `ReverbProcessor::getName()` is
+`"Ambient"`, not `"Reverb"` — `IRLoaderProcessor`'s existing `"Reverb"`
+role (convolution with a real captured IR) already owns that display
+name, and `EffectRegistry` needs every registered type's `getName()` to be
+unique (presets look processors back up by display name). If a future
+effect's natural name collides with an existing one, rename it to
+whichever sheet glyph actually fits (like "Ambient" did here) rather than
+letting the collision silently overwrite the registry's reverse lookup.
 
 A full 68-glyph SVG prototype (all 8 categories, including Bitfession and
 Expression which have no `EffectProcessor` yet) was built and approved by

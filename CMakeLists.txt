@@ -56,6 +56,8 @@ target_sources(PedaleiraNAM PRIVATE
   Source/Effects/OverdriveProcessor.cpp
   Source/Effects/NAMProcessor.cpp
   Source/Effects/IRLoaderProcessor.cpp
+  Source/Effects/DelayProcessor.cpp
+  Source/Effects/ReverbProcessor.cpp
   Source/UI/ChainContainer.cpp
   Source/UI/EffectBlockComponent.cpp
   Source/UI/FooterBar.cpp

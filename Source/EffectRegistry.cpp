@@ -1,10 +1,12 @@
 #include "EffectRegistry.h"
 
 #include "Effects/CompressorProcessor.h"
+#include "Effects/DelayProcessor.h"
 #include "Effects/GateProcessor.h"
 #include "Effects/IRLoaderProcessor.h"
 #include "Effects/NAMProcessor.h"
 #include "Effects/OverdriveProcessor.h"
+#include "Effects/ReverbProcessor.h"
 
 namespace pedaleira
 {
@@ -30,6 +32,14 @@ void registerBuiltInEffects (EffectRegistry& registry)
     // IRLoaderProcessor.h -- this is NOT the same technology as NAM above.
     registry.registerType ("Cab", [] { return std::make_unique<IRLoaderProcessor> ("Cab"); });
     registry.registerType ("Reverb", [] { return std::make_unique<IRLoaderProcessor> ("Reverb"); });
+
+    // Phase 2: Delay + Reverb. One representative processor per category
+    // for now (matching Phase 1's approach of Gate/Compressor/Overdrive
+    // rather than every named variant on the icon sheet) -- the other 8
+    // Delay and 9 Reverb glyphs stay documented-but-unbuilt in
+    // docs/icons/AGENT-icon-notes.md until they get their own processors.
+    registry.registerType ("DigitalDelay", [] { return std::make_unique<DelayProcessor>(); });
+    registry.registerType ("Ambient", [] { return std::make_unique<ReverbProcessor>(); });
 }
 
 void EffectRegistry::registerType (const juce::String& key, Creator creator)

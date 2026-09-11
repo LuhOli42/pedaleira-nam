@@ -59,8 +59,10 @@ namespace
         if (displayName == "Neural Amp" || displayName == "Neural Amp + Cab"
             || displayName == "Neural Pedal" || displayName == "Cab")
             return "Amplifiers";
-        if (displayName == "Reverb")
+        if (displayName == "Reverb" || displayName == "Ambient")
             return "Reverb";
+        if (displayName == "Digital Delay")
+            return "Delay";
         return "Other"; // shouldn't normally happen -- a new effect type that hasn't been categorised yet
     }
 }
