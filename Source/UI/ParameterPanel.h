@@ -94,6 +94,15 @@ private:
     // actually capped to the drawer's bounds.
     juce::Viewport knobViewport;
     juce::Component knobGridHost;
+
+    // The strip between the header row and the knob grid (where statusLabel
+    // sits) is filled in the selected effect's accent colour in paint() --
+    // per user request 2026-09-10, the background BEHIND the knobs stays
+    // the plain panel grey; only this one band reads as "belongs to this
+    // effect". Full width (not inset to the 10px margin the rest of the
+    // panel uses) so it reads as a solid banner. Computed in resized(),
+    // consumed in paint().
+    juce::Rectangle<int> accentBandBounds;
 };
 
 } // namespace pedaleira

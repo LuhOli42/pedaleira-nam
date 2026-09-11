@@ -45,11 +45,11 @@ void IOSelectorBlock::paint (juce::Graphics& g)
     g.fillRoundedRectangle (bounds, 10.0f);
 
     g.setColour (juce::Colours::white);
-    g.setFont (14.0f);
+    g.setFont (15.5f);
     g.drawFittedText (label, bounds.reduced (4.0f).toNearestInt(), juce::Justification::centredTop, 1);
 
     g.setColour (juce::Colours::lightgrey);
-    g.setFont (11.5f);
+    g.setFont (12.5f);
     g.drawFittedText (selectionText, bounds.reduced (4.0f).toNearestInt(), juce::Justification::centredBottom, 2);
 }
 

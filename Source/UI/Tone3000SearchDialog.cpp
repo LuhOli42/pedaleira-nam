@@ -12,7 +12,7 @@ Tone3000SearchDialog::Tone3000SearchDialog (Tone3000Manager& managerToUse, juce:
 {
     addAndMakeVisible (titleLabel);
     titleLabel.setText ("Search TONE3000 (" + gearFilter + ")", juce::dontSendNotification);
-    titleLabel.setFont (juce::Font (16.0f, juce::Font::bold));
+    titleLabel.setFont (juce::Font (18.0f, juce::Font::bold));
 
     addAndMakeVisible (searchField);
     searchField.setTextToShowWhenEmpty ("JCM800, Plexi, Tube Screamer...", juce::Colours::grey);
@@ -44,7 +44,7 @@ Tone3000SearchDialog::Tone3000SearchDialog (Tone3000Manager& managerToUse, juce:
 
     addAndMakeVisible (statusLabel);
     statusLabel.setColour (juce::Label::textColourId, juce::Colours::lightgrey);
-    statusLabel.setFont (12.0f);
+    statusLabel.setFont (13.5f);
 
     if (! manager.isLoggedIn())
         statusLabel.setText ("Not logged in -- open TONE3000 from the toolbar to log in first.", juce::dontSendNotification);
@@ -164,11 +164,11 @@ void Tone3000SearchDialog::paintListBoxItem (int rowNumber, juce::Graphics& g, i
         g.fillAll (juce::Colour (0xff2d5c56));
 
     g.setColour (juce::Colours::white);
-    g.setFont (14.0f);
+    g.setFont (15.5f);
     g.drawText (toneResult.title, 8, 0, width - 16, height / 2, juce::Justification::centredLeft);
 
     g.setColour (juce::Colours::lightgrey);
-    g.setFont (11.0f);
+    g.setFont (12.5f);
     juce::String subtitle = toneResult.author;
     if (toneResult.license.isNotEmpty())
         subtitle += "  ·  " + toneResult.license;

@@ -1,6 +1,7 @@
 #include "ParameterPanel.h"
 
 #include "ModelListDialog.h"
+#include "PedaleiraLookAndFeel.h"
 #include "Tone3000SearchDialog.h"
 #include "TouchSizing.h"
 #include "../Tone3000/GearRouting.h"
@@ -16,19 +17,25 @@ namespace
     // what caused clipping/pointless-scrolling before, see AGENT.md).
     // Sized generously rather than at TouchSizing.h's bare minimum: a
     // rotary knob needs real drag travel to feel controllable by finger,
-    // not just be technically tappable.
-    constexpr int knobCellWidth = 110;
-    constexpr int knobCellHeight = 126;
-    constexpr int knobDiameter = 84;
+    // not just be technically tappable. Bumped 2026-09-10 alongside the
+    // label/value fonts below (stage-readable from a couple of metres, per
+    // user request) -- see Source/UI/AGENTS.md's decision entry on why this
+    // no longer guarantees two full knob rows fit without scrolling at the
+    // dev window's default size (it did before this bump; still true for
+    // every processor that exists today, since none has more than 5
+    // params and even one row comfortably holds ~10 at this width).
+    constexpr int knobCellWidth = 118;
+    constexpr int knobCellHeight = 140;
+    constexpr int knobDiameter = 90;
 }
 
 ParameterPanel::ParameterPanel()
 {
     addAndMakeVisible (titleLabel);
-    titleLabel.setFont (juce::Font (18.0f, juce::Font::bold));
+    titleLabel.setFont (juce::Font (22.0f, juce::Font::bold));
 
     addAndMakeVisible (statusLabel);
-    statusLabel.setFont (juce::Font (13.0f));
+    statusLabel.setFont (juce::Font (15.0f));
     statusLabel.setColour (juce::Label::textColourId, juce::Colours::lightgrey);
 
     addAndMakeVisible (bypassToggle);
@@ -99,6 +106,21 @@ void ParameterPanel::rebuildForCurrentProcessor()
     searchTone3000Button.setVisible (current->wantsModelFile() && tone3000 != nullptr);
     removeButton.setVisible (true);
 
+    // The drawer's buttons, knobs, and the band below the header all pick up
+    // the selected effect's own accent colour (EffectBlockComponent already
+    // outlines the block itself in this colour) so the whole drawer reads
+    // as "this effect's controls" rather than generic chrome -- per user
+    // request 2026-09-10. The title stays plain white (an earlier version
+    // coloured the title text instead of the band -- corrected per
+    // follow-up feedback the same day: the band reads better than coloured
+    // text at this size, and the knob-area background behind the knobs
+    // stays the ordinary panel grey, only the header/knob strip is tinted).
+    const auto accent = current->getAccentColour();
+    titleLabel.setColour (juce::Label::textColourId, juce::Colours::white);
+    bypassToggle.setColour (juce::ToggleButton::tickColourId, accent);
+    for (auto* b : { &browseInstalledButton, &searchTone3000Button, &removeButton })
+        b->setColour (PedaleiraLookAndFeel::accentColourId, accent);
+
     if (auto* group = current->getParameters())
     {
         for (auto* p : group->getParameters (true))
@@ -109,11 +131,13 @@ void ParameterPanel::rebuildForCurrentProcessor()
                 row.param = floatParam;
                 row.slider = std::make_unique<juce::Slider> (juce::Slider::RotaryHorizontalVerticalDrag,
                                                                juce::Slider::TextBoxBelow);
-                row.slider->setTextBoxStyle (juce::Slider::TextBoxBelow, false, 80, 20);
+                row.slider->setTextBoxStyle (juce::Slider::TextBoxBelow, false, 90, 26);
+                row.slider->setColour (juce::Slider::rotarySliderFillColourId, accent);
+                row.slider->setColour (juce::Slider::thumbColourId, accent);
 
                 row.label = std::make_unique<juce::Label> (juce::String(), floatParam->getName (64));
                 row.label->setJustificationType (juce::Justification::centred);
-                row.label->setFont (11.5f);
+                row.label->setFont (14.0f);
 
                 const auto range = floatParam->getNormalisableRange();
                 row.slider->setRange (range.start, range.end, range.interval > 0.0f ? range.interval : 0.01);
@@ -134,6 +158,15 @@ void ParameterPanel::rebuildForCurrentProcessor()
 
     refresh();
     resized();
+
+    // resized() alone doesn't repaint -- and when switching between two
+    // processors whose drawer ends up the same pixel size (e.g. both have
+    // one row of knobs), MainComponent::setBounds() on this panel is a
+    // no-op (bounds unchanged), so nothing else triggers a repaint either.
+    // Without this, the accent band in paint() kept showing the PREVIOUS
+    // effect's colour after switching selection -- per user report
+    // 2026-09-10 ("quando muda não tá preenchendo tudo").
+    repaint();
 }
 
 void ParameterPanel::browseInstalledModels()
@@ -228,7 +261,8 @@ int ParameterPanel::getPreferredContentHeight (int availableWidth) const
     // would silently bring the scrollbar back), a few spare px isn't.
     int height = 20;                    // getLocalBounds().reduced (10) -- top + bottom
     height += touch::minTapTarget;      // the one unified button row (title/bypass/browse/search/remove)
-    height += 20;                       // status label
+    height += 8;                        // gap before the accent band/status label
+    height += 24;                       // status label
     height += 8;                        // gap before the knob grid
 
     const int knobAreaWidth = juce::jmax (knobCellWidth, availableWidth - 20);
@@ -263,9 +297,19 @@ void ParameterPanel::resized()
     bypassToggle.setBounds (top.removeFromRight (110));
     titleLabel.setBounds (top);
 
-    statusLabel.setBounds (area.removeFromTop (20));
+    // Gap before the accent band -- without it the header buttons sat flush
+    // against the band's top edge, per user feedback 2026-09-10.
+    area.removeFromTop (8);
+    statusLabel.setBounds (area.removeFromTop (24));
     area.removeFromTop (8);
     knobViewport.setBounds (area);
+
+    // Full-width band covering the status-label strip and the gap after
+    // it -- everything between the header row and where the knob grid
+    // starts -- painted in the effect's accent colour by paint(). Not
+    // inset to the panel's 10px margin (unlike everything above), so it
+    // reads as a solid banner edge-to-edge rather than an inset chip.
+    accentBandBounds = { 0, statusLabel.getY(), getWidth(), knobViewport.getY() - statusLabel.getY() };
 
     // A pedal-panel-style row of knobs, wrapping to a new row if the panel
     // is narrow. Laid out inside knobGridHost (not this panel directly) so
@@ -287,8 +331,8 @@ void ParameterPanel::resized()
             y += knobCellHeight;
         }
 
-        row.label->setBounds (x, y, knobCellWidth, 18);
-        row.slider->setBounds (x + (knobCellWidth - knobDiameter) / 2, y + 20, knobDiameter, knobDiameter + 22);
+        row.label->setBounds (x, y, knobCellWidth, 22);
+        row.slider->setBounds (x + (knobCellWidth - knobDiameter) / 2, y + 22, knobDiameter, knobDiameter + 28);
         x += knobCellWidth;
         ++col;
     }
@@ -300,6 +344,19 @@ void ParameterPanel::resized()
 void ParameterPanel::paint (juce::Graphics& g)
 {
     g.fillAll (juce::Colour (0xff1e1e1e));
+
+    // The band between the header and the knob grid reads as "this effect's
+    // controls" -- see accentBandBounds's comment in the header. Everything
+    // below it (the knob area itself) stays the plain panel grey above, per
+    // user request 2026-09-10: colouring the band, not the knob background.
+    if (current != nullptr)
+    {
+        // More saturated/vivid than the raw accent (which is tuned to read
+        // well as a thin block OUTLINE against black, not as a fill this
+        // large) -- per user feedback 2026-09-10 ("mais acentuado").
+        g.setColour (current->getAccentColour().withMultipliedSaturation (1.5f).withMultipliedBrightness (1.1f));
+        g.fillRect (accentBandBounds);
+    }
 }
 
 } // namespace pedaleira

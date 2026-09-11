@@ -10,7 +10,7 @@ PresetListDialog::PresetListDialog (juce::StringArray existingNames)
 {
     addAndMakeVisible (titleLabel);
     titleLabel.setText ("Presets", juce::dontSendNotification);
-    titleLabel.setFont (juce::Font (16.0f, juce::Font::bold));
+    titleLabel.setFont (juce::Font (19.0f, juce::Font::bold));
 
     addAndMakeVisible (nameField);
     nameField.setTextToShowWhenEmpty ("Preset name...", juce::Colours::grey);
@@ -71,7 +71,7 @@ void PresetListDialog::paintListBoxItem (int rowNumber, juce::Graphics& g, int w
         g.fillAll (juce::Colour (0xff2d5c56));
 
     g.setColour (juce::Colours::white);
-    g.setFont (14.0f);
+    g.setFont (16.0f);
     g.drawText (names[rowNumber], 14, 0, width - 24, height, juce::Justification::centredLeft);
 }
 

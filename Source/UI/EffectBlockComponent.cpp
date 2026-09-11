@@ -83,7 +83,7 @@ void EffectBlockComponent::paint (juce::Graphics& g)
     // Icon on top, name label along the bottom -- same two-zone layout as
     // the reference (Quad Cortex's Grid blocks): glyph first, text second.
     auto iconArea = bounds.reduced (6.0f);
-    auto nameArea = iconArea.removeFromBottom (18.0f);
+    auto nameArea = iconArea.removeFromBottom (26.0f);
     iconArea.removeFromBottom (2.0f);
 
     // The block itself isn't square (110x78) but every drawIcon() is drawn
@@ -104,7 +104,7 @@ void EffectBlockComponent::paint (juce::Graphics& g)
         g.endTransparencyLayer();
 
     g.setColour (juce::Colours::white.withAlpha (bypassed ? 0.5f : 1.0f));
-    g.setFont (12.5f);
+    g.setFont (18.0f);
     g.drawFittedText (processor.getName(), nameArea.toNearestInt(), juce::Justification::centred, 2);
 }
 

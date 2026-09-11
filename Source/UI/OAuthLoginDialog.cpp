@@ -11,7 +11,7 @@ OAuthLoginDialog::OAuthLoginDialog (const juce::String& authorizeUrl, const juce
     : redirectPrefix (redirectUriPrefix)
 {
     addAndMakeVisible (titleLabel);
-    titleLabel.setFont (juce::Font (16.0f, juce::Font::bold));
+    titleLabel.setFont (juce::Font (19.0f, juce::Font::bold));
 
     addAndMakeVisible (cancelButton);
     cancelButton.onClick = [this] { if (onCancelled) onCancelled(); };

@@ -20,17 +20,20 @@ FetchContent_MakeAvailable(JUCE)
 
 include(cmake/NAMCore.cmake)
 
-# Inter (SIL OFL, see Assets/Fonts/INTER-LICENSE.txt), embedded rather than
+# Sora (SIL OFL, see Assets/Fonts/SORA-LICENSE.txt), embedded rather than
 # relying on the OS having a decent font installed -- the final target is a
 # from-scratch embedded Linux build with no guaranteed font at all. Static
 # weights, not the variable font: JUCE's own font engine doesn't reliably
 # expose a variable font's weight axis, but it renders a real bold/extrabold
-# file exactly as designed.
+# file exactly as designed. Switched from Inter to Sora per user request
+# (2026-09-10) -- Inter read as generic/default, Sora's geometric shapes and
+# distinctive rounded terminals read more as a purpose-built hardware/gear
+# product than a stock UI font.
 juce_add_binary_data(PedaleiraNAM_Fonts
   SOURCES
-    Assets/Fonts/Inter-Regular.ttf
-    Assets/Fonts/Inter-Bold.ttf
-    Assets/Fonts/Inter-ExtraBold.ttf
+    Assets/Fonts/Sora-Regular.ttf
+    Assets/Fonts/Sora-Bold.ttf
+    Assets/Fonts/Sora-ExtraBold.ttf
 )
 
 # A real (if dev-facing, pre-touch, pre-Phase-7) GUI, not a console app --
@@ -55,6 +58,7 @@ target_sources(PedaleiraNAM PRIVATE
   Source/Effects/IRLoaderProcessor.cpp
   Source/UI/ChainContainer.cpp
   Source/UI/EffectBlockComponent.cpp
+  Source/UI/FooterBar.cpp
   Source/UI/IOSelectorBlock.cpp
   Source/UI/ModelListDialog.cpp
   Source/UI/OverlayHost.cpp

@@ -2,6 +2,7 @@
 
 #include "ChainContainer.h"
 #include "EffectBlockComponent.h"
+#include "FooterBar.h"
 #include "IOSelectorBlock.h"
 #include "OverlayHost.h"
 #include "ParameterPanel.h"
@@ -18,6 +19,22 @@
 
 namespace pedaleira
 {
+
+/** Plain juce::Viewport, plus a callback for when it scrolls --
+    visibleAreaChanged() is a virtual on Viewport itself (not a separate
+    Listener interface), so this exists purely to expose it as a
+    std::function MainComponent can hook without inheriting from Viewport
+    itself. Used to keep the gutter connector stubs MainComponent::paint()
+    draws (absolute-coordinate lines that touch the chain's rows) in sync
+    whenever the chain viewport scrolls -- see resized()'s comment on why
+    it can scroll at all (drawer-open padding) and the bug that motivated
+    this, fixed 2026-09-11. */
+class ChainViewport : public juce::Viewport
+{
+public:
+    std::function<void()> onScrolled;
+    void visibleAreaChanged (const juce::Rectangle<int>&) override { if (onScrolled) onScrolled(); }
+};
 
 /**
     Dev-facing chain builder: add any registered effect, in any order, as
@@ -45,14 +62,17 @@ public:
     void resized() override;
 
 private:
-    /** insertAtIndex < 0 (the default) means "append at the end". */
-    void addEffect (const juce::String& registryName, int insertAtIndex = -1);
+    /** targetGridSlot is a grid cell (row*chainColumns+col), not an array
+        index -- see EffectBlockComponent::gridSlot's comment. < 0 (the
+        default) means "no preference, append after the highest occupied
+        slot". */
+    void addEffect (const juce::String& registryName, int targetGridSlot = -1);
     void removeEffect (EffectProcessor* processor);
     void handleBlockDragEnded (EffectBlockComponent& block);
     void selectBlock (EffectProcessor* processor);
     void rebuildSignalGraph();
     void layoutChain();
-    void showAddEffectMenu (int insertAtIndex = -1);
+    void showAddEffectMenu (int targetGridSlot = -1);
     void showSettingsPanel();
     void showPresetsPanel();
     std::unique_ptr<juce::XmlElement> buildPresetXml() const;
@@ -82,20 +102,55 @@ private:
     };
     std::vector<RetiredProcessor> graveyard;
 
-    // How many blocks fit per row at the chain's current width -- set by
-    // layoutChain(), read back by handleBlockDragEnded() to translate a 2D
-    // drop position into a flat chain index. Always >= 1.
-    int chainColumns = 1;
+    // Chain tile size -- SQUARE (blockWidth == blockHeight always) and
+    // derived fresh in every resized() call from the available width so
+    // exactly chainColumns (8) fit across, not a fixed constant. Leftover
+    // VERTICAL space (there's almost always more of it than 4 square tiles
+    // need) becomes rowGap between rows instead of stretching the tiles
+    // into rectangles -- see resized()'s comment for the maths. Per user
+    // request 2026-09-10: "ele tem q ser quadrados n retangulos, n tem
+    // problema se tiver espaço entre eles".
+    int blockWidth = 122, blockHeight = 122;
+    int rowGap = 8;
 
-    juce::Viewport chainViewport;
+    // How many blocks fit per row -- a fixed policy now (8), not derived
+    // from the window width the way it used to be (blockWidth is derived
+    // FROM this instead, see above) -- a row that just kept growing
+    // sideways with the window stopped reading as "one pedalboard row" per
+    // user request 2026-09-10.
+    int chainColumns = 8;
+
+    // How many of the up-to-maxVisibleRows rows are actually occupied right
+    // now (blocks + the add-tile) -- set by resized(), used to know which
+    // row gets the real IN tile (always row 0) and which gets the real OUT
+    // tile (always the last occupied row, not always row 0 the way a
+    // single fixed-height IO gutter used to assume). Rows in between get a
+    // "continues to next row" connector instead -- see paint().
+    int chainUsedRows = 1;
+
+    // The full-height gutter columns either side of the chain, and the Y
+    // where row 0 starts -- captured in resized() (only changes when the
+    // window itself resizes) and reused by every layoutChain() call
+    // (block add/remove/drag, not just a real window resize) to reposition
+    // IN/OUT and place the inter-row connector glyphs paint() draws.
+    juce::Rectangle<int> leftGutterColumn, rightGutterColumn;
+    int chainRowTop = 0;
+
+    ChainViewport chainViewport;
     ChainContainer chainContainer;
-    AddBlockButton addButton;
 
     // Fixed at either end of the row (outside the scrolling viewport) --
     // device I/O routing, not part of the signal graph. See AudioEngine's
-    // setInputChannel/setOutputRouting.
+    // setInputChannel/setOutputRouting. Positioned dynamically in
+    // resized() -- IN always sits at row 0, OUT at whichever row is
+    // currently the last occupied one (see chainUsedRows) -- rather than
+    // fixed to a single centred slot spanning every possible row.
     IOSelectorBlock inputSelector { "IN" };
     IOSelectorBlock outputSelector { "OUT" };
+
+    // Tuner/BPM-tap-tempo/IN-OUT-meters bar, always pinned at the bottom --
+    // see FooterBar.h. Visual placeholder only until Phase 5.
+    FooterBar footerBar;
 
     ParameterPanel parameterPanel;
     PresetManager presets { getPresetsDirectory() };

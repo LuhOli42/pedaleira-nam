@@ -13,7 +13,7 @@ ModelListDialog::ModelListDialog (juce::String titleText, juce::Array<juce::File
 {
     addAndMakeVisible (titleLabel);
     titleLabel.setText (titleText, juce::dontSendNotification);
-    titleLabel.setFont (juce::Font (16.0f, juce::Font::bold));
+    titleLabel.setFont (juce::Font (19.0f, juce::Font::bold));
 
     addAndMakeVisible (listBox);
     listBox.setColour (juce::ListBox::backgroundColourId, juce::Colour (0xff141414));
@@ -63,7 +63,7 @@ void ModelListDialog::paintListBoxItem (int rowNumber, juce::Graphics& g, int wi
         g.fillAll (juce::Colour (0xff2d5c56));
 
     g.setColour (juce::Colours::white);
-    g.setFont (14.0f);
+    g.setFont (16.0f);
     g.drawText (files.getReference (rowNumber).getFileNameWithoutExtension(), 14, 0, width - 24, height,
                 juce::Justification::centredLeft);
 }

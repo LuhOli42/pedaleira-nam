@@ -29,6 +29,18 @@ public:
 
     void setSelected (bool shouldBeSelected);
 
+    /** Which of the maxVisibleRows x chainColumns grid cells this block
+        currently occupies (row*columns+col) -- independent of this block's
+        position in MainComponent's `blocks`/`chain` arrays, which stay
+        sorted by THIS value and are what SignalGraph actually reads in
+        order. Lets a block be dropped/added at any grid cell you click,
+        not just the next sequential slot, while the underlying processing
+        order stays a plain contiguous array with no notion of "gaps" of
+        its own -- per user request 2026-09-10 ("ta adicionando ainda
+        sequencialmente em vez daonde eu clico"). See
+        MainComponent::layoutChain()/addEffect()/handleBlockDragEnded(). */
+    int gridSlot = 0;
+
     /** A plain click (no meaningful drag) selects the block for editing. */
     std::function<void()> onClicked;
 

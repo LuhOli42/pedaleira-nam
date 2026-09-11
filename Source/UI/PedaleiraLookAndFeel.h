@@ -6,11 +6,13 @@ namespace pedaleira
 {
 
 /**
-    Inter (SIL OFL, embedded -- see Assets/Fonts/INTER-LICENSE.txt)
+    Sora (SIL OFL, embedded -- see Assets/Fonts/SORA-LICENSE.txt)
     everywhere instead of whatever generic sans the OS happens to have --
     the final target is a from-scratch embedded Linux build with no
     guaranteed font at all, and the default JUCE font reads as generic
-    "desktop app", not a real product.
+    "desktop app", not a real product. Was Inter until 2026-09-10; swapped
+    per user request for something that reads less like a stock UI font and
+    more like a purpose-built gear product.
 
     Also bumps the popup menu font, which is what makes
     juce::PopupMenu AND juce::ComboBox's dropdown touch-sized:
@@ -29,13 +31,57 @@ public:
     juce::Typeface::Ptr getTypefaceForFont (const juce::Font& font) override;
     juce::Font getPopupMenuFont() override;
 
+    /** JUCE never auto-sizes a Slider's value textbox font to the box's own
+        pixel size -- it just inherits juce::Label's plain default font
+        (see LookAndFeel_V2::createSliderTextBox/getLabelFont), which is why
+        every knob's value readout rendered small regardless of how big the
+        box was drawn. Bumped explicitly here per user request 2026-09-10
+        (needs to read clearly from a couple of metres away on a 10" stage
+        display) -- the only juce::Slider usage in this app is
+        ParameterPanel's knobs, so this is safe as a blanket override. */
+    juce::Label* createSliderTextBox (juce::Slider&) override;
+
     /** For the handful of places (the big preset number/name -- see
         MainComponent) that specifically want the heavier display weight,
         not just "bold" (juce::Font's styleFlags only distinguish
         plain/bold/italic, not weight beyond that -- getTypefaceForFont()
-        above already maps `bold` to Inter Bold; this is the one step
+        above already maps `bold` to Sora Bold; this is the one step
         further, applied by hand where it matters). */
     juce::Typeface::Ptr getExtraBoldTypeface() const noexcept { return extraBold; }
+
+    /** Flat rounded-rect fill + a border that brightens to the app accent
+        on hover/press, replacing LookAndFeel_V4's default gradient-y button
+        (which also used its stock slate-blue widgetBackground -- visibly a
+        different grey family from this app's near-black panels, see the
+        colour setup in the .cpp -- and read as "generic desktop app" per
+        user feedback 2026-09-10). */
+    void drawButtonBackground (juce::Graphics&, juce::Button&, const juce::Colour& backgroundColour,
+                                bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
+
+    /** The app's one DEFAULT accent colour -- the knob fill/pointer colour
+        (Slider::rotarySliderFillColourId, set in the .cpp) and the drawer's
+        scrollbar thumb, and drawButtonBackground()'s fallback border when a
+        button hasn't been given its own accentColourId (see below). Kept
+        distinct from any effect's own category colour so generic chrome
+        (outside a selected block's drawer) doesn't borrow a colour that
+        would look like it belongs to whichever effect happened to be
+        selected last. */
+    static juce::Colour getAppAccentColour() noexcept { return juce::Colour (0xff42a2c8); }
+
+    /** Per-button accent override -- ParameterPanel sets this to the
+        selected processor's own getAccentColour() on its drawer buttons
+        (Bypassed/Browse/Search/Remove) so they read as "this effect's
+        controls", matching the coloured outline the block already has in
+        the chain (EffectBlockComponent::paint()) per user request
+        2026-09-10. Falls back to getAppAccentColour() via the default set
+        on `this` in the constructor -- Component::findColour() walks up to
+        the LookAndFeel's own colour if no instance/parent override exists,
+        so buttons that never get a per-effect colour set (or with nothing
+        selected) still render sensibly. */
+    enum ColourIds
+    {
+        accentColourId = 0x2f000001
+    };
 
 private:
     juce::Typeface::Ptr regular, bold, extraBold;

@@ -9,10 +9,10 @@ Tone3000Panel::Tone3000Panel (Tone3000Manager& managerToUse)
     : manager (managerToUse)
 {
     addAndMakeVisible (titleLabel);
-    titleLabel.setFont (juce::Font (20.0f, juce::Font::bold));
+    titleLabel.setFont (juce::Font (23.0f, juce::Font::bold));
 
     addAndMakeVisible (tone3000SectionLabel);
-    tone3000SectionLabel.setFont (juce::Font (14.0f, juce::Font::bold));
+    tone3000SectionLabel.setFont (juce::Font (16.0f, juce::Font::bold));
     tone3000SectionLabel.setColour (juce::Label::textColourId, juce::Colours::lightgrey);
 
     addAndMakeVisible (clientIdLabel);
