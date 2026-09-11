@@ -118,12 +118,16 @@ palette now for effects that don't exist yet.
 | IRLoaderProcessor ("Cab") | Amplificadores → Cab | `Assets/Icons/cab.svg` (box + 2x2 outline circles) | `Source/Effects/IRLoaderProcessor.cpp` |
 | IRLoaderProcessor ("Reverb") | Reverb → Hall | `Assets/Icons/hall.svg` (tall pointed arch — this role covers every IR-based space in one block, so Hall stands in as the one glyph until Plate/Room/Spring/... are separate blocks) | `Source/Effects/IRLoaderProcessor.cpp` |
 | DelayProcessor | Delay → Digital Delay | `Assets/Icons/digital_delay.svg` (3 filled dots decreasing in size) | `Source/Effects/DelayProcessor.cpp` |
+| TapeDelayProcessor | Delay → Tape Delay | `Assets/Icons/tape_delay.svg` (box + 2 reels + baseline) | `Source/Effects/TapeDelayProcessor.cpp` |
 | ReverbProcessor ("Ambient") | Reverb → Ambient | `Assets/Icons/ambient.svg` (3 concentric circles) | `Source/Effects/ReverbProcessor.cpp` |
 
-**Phase 2 note (2026-09-11):** `DelayProcessor`/`ReverbProcessor` are one
-representative processor per category, same approach as Phase 1's
-Gate/Compressor/Overdrive rather than building all 9 Delay + 10 Reverb
-variants from the sheet at once. `ReverbProcessor::getName()` is
+**Phase 2 note (2026-09-11):** `DelayProcessor`/`TapeDelayProcessor`/
+`ReverbProcessor` don't cover every Delay/Reverb variant from the sheet at
+once, same approach as Phase 1's Gate/Compressor/Overdrive -- each new one
+adds real DSP variety (Tape Delay's wow/flutter + feedback saturation is
+audibly different from Digital Delay's clean line, not just a re-skinned
+copy) rather than being added just to check a box on the sheet.
+`ReverbProcessor::getName()` is
 `"Ambient"`, not `"Reverb"` — `IRLoaderProcessor`'s existing `"Reverb"`
 role (convolution with a real captured IR) already owns that display
 name, and `EffectRegistry` needs every registered type's `getName()` to be

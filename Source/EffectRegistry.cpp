@@ -2,6 +2,7 @@
 
 #include "Effects/CompressorProcessor.h"
 #include "Effects/DelayProcessor.h"
+#include "Effects/TapeDelayProcessor.h"
 #include "Effects/GateProcessor.h"
 #include "Effects/IRLoaderProcessor.h"
 #include "Effects/NAMProcessor.h"
@@ -39,6 +40,7 @@ void registerBuiltInEffects (EffectRegistry& registry)
     // Delay and 9 Reverb glyphs stay documented-but-unbuilt in
     // docs/icons/AGENT-icon-notes.md until they get their own processors.
     registry.registerType ("DigitalDelay", [] { return std::make_unique<DelayProcessor>(); });
+    registry.registerType ("TapeDelay", [] { return std::make_unique<TapeDelayProcessor>(); });
     registry.registerType ("Ambient", [] { return std::make_unique<ReverbProcessor>(); });
 }
 

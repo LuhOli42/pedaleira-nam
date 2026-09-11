@@ -6,7 +6,7 @@ namespace pedaleira::icon
 {
 
 /**
-    Draws one of the embedded Assets/Icons/*.svg files into `bounds`.
+    Draws one of the embedded Assets/Icons SVG files into `bounds`.
 
     Each drawIcon() override calls this with a `static const std::unique_ptr
     <juce::Drawable> icon = ...` built once from the matching IconData::

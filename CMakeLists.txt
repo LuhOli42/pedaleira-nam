@@ -56,6 +56,7 @@ juce_add_binary_data(PedaleiraNAM_Icons
     Assets/Icons/cab.svg
     Assets/Icons/hall.svg
     Assets/Icons/digital_delay.svg
+    Assets/Icons/tape_delay.svg
     Assets/Icons/ambient.svg
 )
 
@@ -80,6 +81,7 @@ target_sources(PedaleiraNAM PRIVATE
   Source/Effects/NAMProcessor.cpp
   Source/Effects/IRLoaderProcessor.cpp
   Source/Effects/DelayProcessor.cpp
+  Source/Effects/TapeDelayProcessor.cpp
   Source/Effects/ReverbProcessor.cpp
   Source/UI/ChainContainer.cpp
   Source/UI/EffectBlockComponent.cpp

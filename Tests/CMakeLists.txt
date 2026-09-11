@@ -13,6 +13,7 @@ target_sources(PedaleiraNAM_Tests PRIVATE
   OverdriveProcessorTests.cpp
   NAMProcessorTests.cpp
   DelayProcessorTests.cpp
+  TapeDelayProcessorTests.cpp
   ReverbProcessorTests.cpp
   ../Source/EffectRegistry.cpp
   ../Source/Engine/SignalGraph.cpp
@@ -23,6 +24,7 @@ target_sources(PedaleiraNAM_Tests PRIVATE
   ../Source/Effects/NAMProcessor.cpp
   ../Source/Effects/IRLoaderProcessor.cpp
   ../Source/Effects/DelayProcessor.cpp
+  ../Source/Effects/TapeDelayProcessor.cpp
   ../Source/Effects/ReverbProcessor.cpp
 )
 

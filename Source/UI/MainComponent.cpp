@@ -61,7 +61,7 @@ namespace
             return "Amplifiers";
         if (displayName == "Reverb" || displayName == "Ambient")
             return "Reverb";
-        if (displayName == "Digital Delay")
+        if (displayName == "Digital Delay" || displayName == "Tape Delay")
             return "Delay";
         return "Other"; // shouldn't normally happen -- a new effect type that hasn't been categorised yet
     }
