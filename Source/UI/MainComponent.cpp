@@ -59,7 +59,7 @@ namespace
         if (displayName == "Neural Amp" || displayName == "Neural Amp + Cab"
             || displayName == "Neural Pedal" || displayName == "Cab")
             return "Amplifiers";
-        if (displayName == "Reverb" || displayName == "Ambient")
+        if (displayName == "Reverb" || displayName == "Ambient" || displayName == "Spring")
             return "Reverb";
         if (displayName == "Digital Delay" || displayName == "Tape Delay")
             return "Delay";

@@ -15,6 +15,7 @@ target_sources(PedaleiraNAM_Tests PRIVATE
   DelayProcessorTests.cpp
   TapeDelayProcessorTests.cpp
   ReverbProcessorTests.cpp
+  SpringReverbProcessorTests.cpp
   ../Source/EffectRegistry.cpp
   ../Source/Engine/SignalGraph.cpp
   ../Source/Engine/ParameterManager.cpp
@@ -26,6 +27,7 @@ target_sources(PedaleiraNAM_Tests PRIVATE
   ../Source/Effects/DelayProcessor.cpp
   ../Source/Effects/TapeDelayProcessor.cpp
   ../Source/Effects/ReverbProcessor.cpp
+  ../Source/Effects/SpringReverbProcessor.cpp
 )
 
 target_include_directories(PedaleiraNAM_Tests PRIVATE ../Source)

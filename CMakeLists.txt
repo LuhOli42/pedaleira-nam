@@ -58,6 +58,7 @@ juce_add_binary_data(PedaleiraNAM_Icons
     Assets/Icons/digital_delay.svg
     Assets/Icons/tape_delay.svg
     Assets/Icons/ambient.svg
+    Assets/Icons/spring.svg
 )
 
 # A real (if dev-facing, pre-touch, pre-Phase-7) GUI, not a console app --
@@ -83,6 +84,7 @@ target_sources(PedaleiraNAM PRIVATE
   Source/Effects/DelayProcessor.cpp
   Source/Effects/TapeDelayProcessor.cpp
   Source/Effects/ReverbProcessor.cpp
+  Source/Effects/SpringReverbProcessor.cpp
   Source/UI/ChainContainer.cpp
   Source/UI/EffectBlockComponent.cpp
   Source/UI/FooterBar.cpp

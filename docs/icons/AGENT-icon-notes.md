@@ -120,13 +120,17 @@ palette now for effects that don't exist yet.
 | DelayProcessor | Delay → Digital Delay | `Assets/Icons/digital_delay.svg` (3 filled dots decreasing in size) | `Source/Effects/DelayProcessor.cpp` |
 | TapeDelayProcessor | Delay → Tape Delay | `Assets/Icons/tape_delay.svg` (box + 2 reels + baseline) | `Source/Effects/TapeDelayProcessor.cpp` |
 | ReverbProcessor ("Ambient") | Reverb → Ambient | `Assets/Icons/ambient.svg` (3 concentric circles) | `Source/Effects/ReverbProcessor.cpp` |
+| SpringReverbProcessor | Reverb → Spring | `Assets/Icons/spring.svg` (row of overlapping loops) | `Source/Effects/SpringReverbProcessor.cpp` |
 
 **Phase 2 note (2026-09-11):** `DelayProcessor`/`TapeDelayProcessor`/
-`ReverbProcessor` don't cover every Delay/Reverb variant from the sheet at
-once, same approach as Phase 1's Gate/Compressor/Overdrive -- each new one
-adds real DSP variety (Tape Delay's wow/flutter + feedback saturation is
-audibly different from Digital Delay's clean line, not just a re-skinned
-copy) rather than being added just to check a box on the sheet.
+`ReverbProcessor`/`SpringReverbProcessor` don't cover every Delay/Reverb
+variant from the sheet at once, same approach as Phase 1's
+Gate/Compressor/Overdrive -- each new one adds real DSP variety (Tape
+Delay's wow/flutter + feedback saturation is audibly different from
+Digital Delay's clean line; Spring's allpass-dispersion-into-a-damped-comb
+is a genuinely different algorithm from Ambient's smooth `juce::dsp::Reverb`
+wash, not the same reverb with different presets) rather than being added
+just to check a box on the sheet.
 `ReverbProcessor::getName()` is
 `"Ambient"`, not `"Reverb"` — `IRLoaderProcessor`'s existing `"Reverb"`
 role (convolution with a real captured IR) already owns that display

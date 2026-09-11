@@ -8,6 +8,7 @@
 #include "Effects/NAMProcessor.h"
 #include "Effects/OverdriveProcessor.h"
 #include "Effects/ReverbProcessor.h"
+#include "Effects/SpringReverbProcessor.h"
 
 namespace pedaleira
 {
@@ -42,6 +43,7 @@ void registerBuiltInEffects (EffectRegistry& registry)
     registry.registerType ("DigitalDelay", [] { return std::make_unique<DelayProcessor>(); });
     registry.registerType ("TapeDelay", [] { return std::make_unique<TapeDelayProcessor>(); });
     registry.registerType ("Ambient", [] { return std::make_unique<ReverbProcessor>(); });
+    registry.registerType ("Spring", [] { return std::make_unique<SpringReverbProcessor>(); });
 }
 
 void EffectRegistry::registerType (const juce::String& key, Creator creator)
