@@ -62,7 +62,7 @@ namespace
         if (displayName == "Reverb" || displayName == "Ambient" || displayName == "Spring")
             return "Reverb";
         if (displayName == "Digital Delay" || displayName == "Tape Delay" || displayName == "Ping Pong"
-            || displayName == "Reverse Delay")
+            || displayName == "Reverse Delay" || displayName == "Hold")
             return "Delay";
         return "Other"; // shouldn't normally happen -- a new effect type that hasn't been categorised yet
     }

@@ -30,7 +30,7 @@ Hardware + software guitar pedalboard for live use, not a demo. **Two-legged str
 |---|---|
 | 0 — Architecture + JUCE/CMake skeleton | done |
 | 1 — Audio Engine + Pedals + NAM + Cab/IR + TONE3000 + Presets | done |
-| 2 — Delay + Reverb | in progress (`DelayProcessor`, `TapeDelayProcessor`, `PingPongDelayProcessor`, `ReverseDelayProcessor`, `ReverbProcessor`, `SpringReverbProcessor` done; other 13 sheet variants not started) |
+| 2 — Delay + Reverb | in progress (`DelayProcessor`, `TapeDelayProcessor`, `PingPongDelayProcessor`, `ReverseDelayProcessor`, `HoldProcessor`, `ReverbProcessor`, `SpringReverbProcessor` done; other 12 sheet variants not started) |
 | 3 — Modulation | not started |
 | 4 — Pitch | not started |
 | 5 — Looper, tuner, MIDI, advanced routing | not started |

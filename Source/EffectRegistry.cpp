@@ -11,6 +11,7 @@
 #include "Effects/SpringReverbProcessor.h"
 #include "Effects/PingPongDelayProcessor.h"
 #include "Effects/ReverseDelayProcessor.h"
+#include "Effects/HoldProcessor.h"
 
 namespace pedaleira
 {
@@ -48,6 +49,7 @@ void registerBuiltInEffects (EffectRegistry& registry)
     registry.registerType ("Spring", [] { return std::make_unique<SpringReverbProcessor>(); });
     registry.registerType ("PingPong", [] { return std::make_unique<PingPongDelayProcessor>(); });
     registry.registerType ("ReverseDelay", [] { return std::make_unique<ReverseDelayProcessor>(); });
+    registry.registerType ("Hold", [] { return std::make_unique<HoldProcessor>(); });
 }
 
 void EffectRegistry::registerType (const juce::String& key, Creator creator)

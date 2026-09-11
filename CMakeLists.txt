@@ -59,6 +59,7 @@ juce_add_binary_data(PedaleiraNAM_Icons
     Assets/Icons/tape_delay.svg
     Assets/Icons/ping_pong.svg
     Assets/Icons/reverse_delay.svg
+    Assets/Icons/hold.svg
     Assets/Icons/ambient.svg
     Assets/Icons/spring.svg
 )
@@ -87,6 +88,7 @@ target_sources(PedaleiraNAM PRIVATE
   Source/Effects/TapeDelayProcessor.cpp
   Source/Effects/PingPongDelayProcessor.cpp
   Source/Effects/ReverseDelayProcessor.cpp
+  Source/Effects/HoldProcessor.cpp
   Source/Effects/ReverbProcessor.cpp
   Source/Effects/SpringReverbProcessor.cpp
   Source/UI/ChainContainer.cpp

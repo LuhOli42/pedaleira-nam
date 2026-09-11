@@ -18,6 +18,7 @@ target_sources(PedaleiraNAM_Tests PRIVATE
   SpringReverbProcessorTests.cpp
   PingPongDelayProcessorTests.cpp
   ReverseDelayProcessorTests.cpp
+  HoldProcessorTests.cpp
   ../Source/EffectRegistry.cpp
   ../Source/Engine/SignalGraph.cpp
   ../Source/Engine/ParameterManager.cpp
@@ -32,6 +33,7 @@ target_sources(PedaleiraNAM_Tests PRIVATE
   ../Source/Effects/SpringReverbProcessor.cpp
   ../Source/Effects/PingPongDelayProcessor.cpp
   ../Source/Effects/ReverseDelayProcessor.cpp
+  ../Source/Effects/HoldProcessor.cpp
 )
 
 target_include_directories(PedaleiraNAM_Tests PRIVATE ../Source)
