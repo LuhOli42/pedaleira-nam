@@ -122,6 +122,7 @@ palette now for effects that don't exist yet.
 | ReverbProcessor ("Ambient") | Reverb → Ambient | `Assets/Icons/ambient.svg` (3 concentric circles) | `Source/Effects/ReverbProcessor.cpp` |
 | SpringReverbProcessor | Reverb → Spring | `Assets/Icons/spring.svg` (row of overlapping loops) | `Source/Effects/SpringReverbProcessor.cpp` |
 | PingPongDelayProcessor | Delay → Ping Pong | `Assets/Icons/ping_pong.svg` (two rails + a bouncing path) | `Source/Effects/PingPongDelayProcessor.cpp` |
+| ReverseDelayProcessor | Delay → Reverse Delay | `Assets/Icons/reverse_delay.svg` (rewind triangle + bar) | `Source/Effects/ReverseDelayProcessor.cpp` |
 
 **Phase 2 note (2026-09-11):** `DelayProcessor`/`TapeDelayProcessor`/
 `ReverbProcessor`/`SpringReverbProcessor` don't cover every Delay/Reverb

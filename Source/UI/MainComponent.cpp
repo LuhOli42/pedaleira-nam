@@ -61,7 +61,8 @@ namespace
             return "Amplifiers";
         if (displayName == "Reverb" || displayName == "Ambient" || displayName == "Spring")
             return "Reverb";
-        if (displayName == "Digital Delay" || displayName == "Tape Delay" || displayName == "Ping Pong")
+        if (displayName == "Digital Delay" || displayName == "Tape Delay" || displayName == "Ping Pong"
+            || displayName == "Reverse Delay")
             return "Delay";
         return "Other"; // shouldn't normally happen -- a new effect type that hasn't been categorised yet
     }
