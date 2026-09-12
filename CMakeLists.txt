@@ -91,7 +91,8 @@ target_sources(PedaleiraNAM PRIVATE
   Source/Effects/HoldProcessor.cpp
   Source/Effects/ReverbProcessor.cpp
   Source/Effects/SpringReverbProcessor.cpp
-  Source/UI/ChainContainer.cpp
+  Source/UI/RoutingGraph.cpp
+  Source/UI/RoutingCanvas.cpp
   Source/UI/EffectBlockComponent.cpp
   Source/UI/FooterBar.cpp
   Source/UI/IOSelectorBlock.cpp
