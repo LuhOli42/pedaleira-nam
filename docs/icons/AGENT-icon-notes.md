@@ -125,6 +125,12 @@ palette now for effects that don't exist yet.
 | ReverseDelayProcessor | Delay → Reverse Delay | `Assets/Icons/reverse_delay.svg` (rewind triangle + bar) | `Source/Effects/ReverseDelayProcessor.cpp` |
 | HoldProcessor | Delay → Hold | `Assets/Icons/hold.svg` (two bare pause bars) | `Source/Effects/HoldProcessor.cpp` |
 | HallReverbProcessor | Reverb → Hall | `Assets/Icons/hall.svg` (tall pointed arch) — now this class's alone, see the IRLoaderProcessor row above | `Source/Effects/HallReverbProcessor.cpp` |
+| PlateReverbProcessor | Reverb → Plate | `Assets/Icons/plate.svg` (flat plate + sound arcing off its surface) | `Source/Effects/PlateReverbProcessor.cpp` |
+| RoomReverbProcessor | Reverb → Room | `Assets/Icons/room.svg` (nested boxes tightening toward the centre) | `Source/Effects/RoomReverbProcessor.cpp` |
+| ShimmerReverbProcessor | Reverb → Shimmer | `Assets/Icons/shimmer.svg` (wash + sparkle above it) | `Source/Effects/ShimmerReverbProcessor.cpp` |
+| GatedReverbProcessor | Reverb → Gated | `Assets/Icons/gated.svg` (decaying wave cut off by a hard bar) | `Source/Effects/GatedReverbProcessor.cpp` |
+| AnalogDelayProcessor | Delay → Analog Delay | `Assets/Icons/analog_delay.svg` (decaying rounded humps) | `Source/Effects/AnalogDelayProcessor.cpp` |
+| DualDelayProcessor | Delay → Dual Delay | `Assets/Icons/dual_delay.svg` (two offset dot-rows) | `Source/Effects/DualDelayProcessor.cpp` |
 
 **Phase 2 note (2026-09-11):** `DelayProcessor`/`TapeDelayProcessor`/
 `ReverbProcessor`/`SpringReverbProcessor` don't cover every Delay/Reverb

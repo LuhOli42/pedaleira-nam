@@ -58,9 +58,11 @@ namespace
         if (displayName == "Neural Amp" || displayName == "Neural Amp + Cab"
             || displayName == "Neural Pedal" || displayName == "Cab")
             return "Amplifiers";
-        if (displayName == "Reverb" || displayName == "Ambient" || displayName == "Spring" || displayName == "Hall")
+        if (displayName == "Reverb" || displayName == "Ambient" || displayName == "Spring" || displayName == "Hall"
+            || displayName == "Plate" || displayName == "Room" || displayName == "Shimmer" || displayName == "Gated")
             return "Reverb";
-        if (displayName == "Digital Delay" || displayName == "Tape Delay" || displayName == "Ping Pong"
+        if (displayName == "Digital Delay" || displayName == "Tape Delay" || displayName == "Analog Delay"
+            || displayName == "Dual Delay" || displayName == "Ping Pong"
             || displayName == "Reverse Delay" || displayName == "Hold")
             return "Delay";
         return "Other"; // shouldn't normally happen -- a new effect type that hasn't been categorised yet

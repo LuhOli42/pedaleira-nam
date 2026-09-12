@@ -10,6 +10,12 @@
 #include "Effects/ReverbProcessor.h"
 #include "Effects/SpringReverbProcessor.h"
 #include "Effects/HallReverbProcessor.h"
+#include "Effects/PlateReverbProcessor.h"
+#include "Effects/RoomReverbProcessor.h"
+#include "Effects/ShimmerReverbProcessor.h"
+#include "Effects/GatedReverbProcessor.h"
+#include "Effects/AnalogDelayProcessor.h"
+#include "Effects/DualDelayProcessor.h"
 #include "Effects/PingPongDelayProcessor.h"
 #include "Effects/ReverseDelayProcessor.h"
 #include "Effects/HoldProcessor.h"
@@ -46,9 +52,15 @@ void registerBuiltInEffects (EffectRegistry& registry)
     // get wired up; see that doc's rule on never guessing a new one).
     registry.registerType ("DigitalDelay", [] { return std::make_unique<DelayProcessor>(); });
     registry.registerType ("TapeDelay", [] { return std::make_unique<TapeDelayProcessor>(); });
+    registry.registerType ("AnalogDelay", [] { return std::make_unique<AnalogDelayProcessor>(); });
+    registry.registerType ("DualDelay", [] { return std::make_unique<DualDelayProcessor>(); });
     registry.registerType ("Ambient", [] { return std::make_unique<ReverbProcessor>(); });
     registry.registerType ("Spring", [] { return std::make_unique<SpringReverbProcessor>(); });
     registry.registerType ("Hall", [] { return std::make_unique<HallReverbProcessor>(); });
+    registry.registerType ("Plate", [] { return std::make_unique<PlateReverbProcessor>(); });
+    registry.registerType ("Room", [] { return std::make_unique<RoomReverbProcessor>(); });
+    registry.registerType ("Shimmer", [] { return std::make_unique<ShimmerReverbProcessor>(); });
+    registry.registerType ("GatedReverb", [] { return std::make_unique<GatedReverbProcessor>(); });
     registry.registerType ("PingPong", [] { return std::make_unique<PingPongDelayProcessor>(); });
     registry.registerType ("ReverseDelay", [] { return std::make_unique<ReverseDelayProcessor>(); });
     registry.registerType ("Hold", [] { return std::make_unique<HoldProcessor>(); });

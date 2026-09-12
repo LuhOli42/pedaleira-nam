@@ -62,6 +62,12 @@ juce_add_binary_data(OpenGuitarMultiFx_Icons
     Assets/Icons/hold.svg
     Assets/Icons/ambient.svg
     Assets/Icons/spring.svg
+    Assets/Icons/plate.svg
+    Assets/Icons/room.svg
+    Assets/Icons/analog_delay.svg
+    Assets/Icons/dual_delay.svg
+    Assets/Icons/shimmer.svg
+    Assets/Icons/gated.svg
 )
 
 # A real (if dev-facing, pre-touch, pre-Phase-7) GUI, not a console app --
@@ -92,6 +98,12 @@ target_sources(OpenGuitarMultiFx PRIVATE
   Source/Effects/ReverbProcessor.cpp
   Source/Effects/SpringReverbProcessor.cpp
   Source/Effects/HallReverbProcessor.cpp
+  Source/Effects/PlateReverbProcessor.cpp
+  Source/Effects/RoomReverbProcessor.cpp
+  Source/Effects/ShimmerReverbProcessor.cpp
+  Source/Effects/GatedReverbProcessor.cpp
+  Source/Effects/AnalogDelayProcessor.cpp
+  Source/Effects/DualDelayProcessor.cpp
   Source/UI/ChainContainer.cpp
   Source/UI/EffectBlockComponent.cpp
   Source/UI/FooterBar.cpp

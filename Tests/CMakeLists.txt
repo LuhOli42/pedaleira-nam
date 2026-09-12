@@ -17,6 +17,12 @@ target_sources(OpenGuitarMultiFx_Tests PRIVATE
   ReverbProcessorTests.cpp
   SpringReverbProcessorTests.cpp
   HallReverbProcessorTests.cpp
+  PlateReverbProcessorTests.cpp
+  RoomReverbProcessorTests.cpp
+  ShimmerReverbProcessorTests.cpp
+  GatedReverbProcessorTests.cpp
+  AnalogDelayProcessorTests.cpp
+  DualDelayProcessorTests.cpp
   PingPongDelayProcessorTests.cpp
   ReverseDelayProcessorTests.cpp
   HoldProcessorTests.cpp
@@ -33,6 +39,12 @@ target_sources(OpenGuitarMultiFx_Tests PRIVATE
   ../Source/Effects/ReverbProcessor.cpp
   ../Source/Effects/SpringReverbProcessor.cpp
   ../Source/Effects/HallReverbProcessor.cpp
+  ../Source/Effects/PlateReverbProcessor.cpp
+  ../Source/Effects/RoomReverbProcessor.cpp
+  ../Source/Effects/ShimmerReverbProcessor.cpp
+  ../Source/Effects/GatedReverbProcessor.cpp
+  ../Source/Effects/AnalogDelayProcessor.cpp
+  ../Source/Effects/DualDelayProcessor.cpp
   ../Source/Effects/PingPongDelayProcessor.cpp
   ../Source/Effects/ReverseDelayProcessor.cpp
   ../Source/Effects/HoldProcessor.cpp
