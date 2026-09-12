@@ -587,7 +587,10 @@ void MainComponent::layoutChain()
     // to the component's own bounds). Still grows past that if there's
     // genuinely more content (the scrollbar fallback).
     const int drawnRows = juce::jmax (totalRows, numRows);
-    chainContainer.setSize (viewportWidth, drawnRows * (blockHeight + rowGap) - rowGap);
+    // + drawerScrollPadding: whatever the open drawer currently overlays
+    // needs to stay reachable by scrolling -- see the member's comment for
+    // why this has to be reapplied HERE rather than added on afterward.
+    chainContainer.setSize (viewportWidth, drawnRows * (blockHeight + rowGap) - rowGap + drawerScrollPadding);
     chainContainer.setRowMetrics (chainColumns, blockWidth, blockHeight, blockGap, rowGap);
     chainContainer.setBlockBounds (std::move (bounds));
 
@@ -1081,6 +1084,22 @@ void MainComponent::resized()
     }
     parameterPanel.setBounds (area.removeFromBottom (panelHeight));
     parameterPanel.setVisible (panelHeight > 0);
+
+    // The drawer covers the bottom panelHeight px of the SAME chain area it
+    // overlays (see above) without shrinking chainViewport's own bounds --
+    // so without this, any row underneath it would just be permanently
+    // hidden with no way to reach it. Recording it here (ALWAYS, not just
+    // when panelHeight > 0 -- closing the drawer has to clear it back to 0
+    // just as reliably) and re-running layoutChain() lets it bake the
+    // padding into chainContainer's height itself, so the padding survives
+    // every later re-layout, including the ones triggered BY scrolling
+    // (chainViewport.onScrolled -> layoutChain()) -- see the member's
+    // comment for the loop that was silently erasing it before. Per user
+    // request 2026-09-11 ("quando abrir tipo o tab por cima... coloca em
+    // ver um scrollbar").
+    drawerScrollPadding = panelHeight;
+    layoutChain();
+
     if (panelHeight > 0)
     {
         parameterPanel.toFront (false); // overlays the chain -- must paint after it, see chainViewport's add order
@@ -1094,17 +1113,31 @@ void MainComponent::resized()
         // it usable regardless of the drawer's own z-order.
         chainScrollBar.toFront (false);
 
-        // The drawer covers the bottom panelHeight px of the SAME chain
-        // area it overlays (see above) without shrinking chainViewport's
-        // own bounds -- so without this, any row underneath it would just
-        // be permanently hidden with no way to reach it. Padding
-        // chainContainer's content height by exactly the covered amount
-        // gives the viewport genuine scrollable overflow: scrolling up
-        // shifts the covered row(s) into the visible, non-overlaid part of
-        // the same viewport rectangle. Per user request 2026-09-11
-        // ("quando abrir tipo o tab por cima... coloca em ver um
-        // scrollbar").
-        chainContainer.setSize (chainContainer.getWidth(), chainContainer.getHeight() + panelHeight);
+        // Auto-scroll the just-selected block into the part of the
+        // viewport the drawer DOESN'T cover -- selecting a block on row 3
+        // or 4 is exactly what opens the drawer that can then hide it, so
+        // making the user manually scroll to see what they just selected
+        // would be circular. Per user request 2026-09-12 ("se for pra
+        // editar um efeito dessas linhas, tem que ser automatico o
+        // scroll").
+        for (auto* block : blocks)
+        {
+            if (&block->processor != selectedProcessor)
+                continue;
+
+            const int visibleHeight = chainViewport.getHeight() - panelHeight;
+            const int currentTop = chainViewport.getViewPositionY();
+            int target = currentTop;
+
+            if (block->getBottom() > currentTop + visibleHeight)
+                target = block->getBottom() - visibleHeight;
+            if (block->getY() < target)
+                target = block->getY();
+
+            target = juce::jlimit (0, juce::jmax (0, chainContainer.getHeight() - chainViewport.getHeight()), target);
+            chainViewport.setViewPosition (chainViewport.getViewPositionX(), target);
+            break;
+        }
     }
 
     // Closing the drawer shrinks chainContainer back down (the padding

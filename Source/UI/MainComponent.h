@@ -204,6 +204,19 @@ private:
     juce::Rectangle<int> leftGutterColumn, rightGutterColumn;
     int chainRowTop = 0;
 
+    // How much extra height the open parameter drawer is currently adding
+    // to chainContainer, ON TOP of what the rows themselves need -- that
+    // extra room is the only thing that makes scrolling possible while the
+    // drawer overlays the bottom rows. layoutChain() has to bake this in
+    // every time it sets chainContainer's height, not just once right
+    // after resized() computes it: layoutChain() also runs from
+    // chainViewport.onScrolled (so dragging the scrollbar re-triggers it),
+    // and if it recomputed height from the rows alone it would silently
+    // erase this padding on the very first scroll -- which is exactly what
+    // was making the scrollbar disappear the instant resized() finished
+    // (user report 2026-09-12, screenshot showing no scrollbar at all).
+    int drawerScrollPadding = 0;
+
     ChainViewport chainViewport;
     ChainContainer chainContainer;
 
