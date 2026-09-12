@@ -69,6 +69,8 @@ namespace
             || displayName == "Flanger" || displayName == "Phaser" || displayName == "Rotary"
             || displayName == "Uni-Vibe" || displayName == "Pitch Mod")
             return "Modulation";
+        if (displayName == "Pitch Shift" || displayName == "Octaver" || displayName == "Harmonizer")
+            return "Filter/FX";
         return "Other"; // shouldn't normally happen -- a new effect type that hasn't been categorised yet
     }
 }

@@ -25,6 +25,9 @@
 #include "Effects/RotaryProcessor.h"
 #include "Effects/UniVibeProcessor.h"
 #include "Effects/PitchModProcessor.h"
+#include "Effects/PitchShiftProcessor.h"
+#include "Effects/OctaverProcessor.h"
+#include "Effects/HarmonizerProcessor.h"
 #include "Effects/PingPongDelayProcessor.h"
 #include "Effects/ReverseDelayProcessor.h"
 #include "Effects/HoldProcessor.h"
@@ -74,6 +77,11 @@ void registerBuiltInEffects (EffectRegistry& registry)
     registry.registerType ("Rotary", [] { return std::make_unique<RotaryProcessor>(); });
     registry.registerType ("UniVibe", [] { return std::make_unique<UniVibeProcessor>(); });
     registry.registerType ("PitchMod", [] { return std::make_unique<PitchModProcessor>(); });
+
+    // Phase 4: Pitch.
+    registry.registerType ("PitchShift", [] { return std::make_unique<PitchShiftProcessor>(); });
+    registry.registerType ("Octaver", [] { return std::make_unique<OctaverProcessor>(); });
+    registry.registerType ("Harmonizer", [] { return std::make_unique<HarmonizerProcessor>(); });
     registry.registerType ("Ambient", [] { return std::make_unique<ReverbProcessor>(); });
     registry.registerType ("Spring", [] { return std::make_unique<SpringReverbProcessor>(); });
     registry.registerType ("Hall", [] { return std::make_unique<HallReverbProcessor>(); });

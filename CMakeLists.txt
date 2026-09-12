@@ -77,6 +77,9 @@ juce_add_binary_data(OpenGuitarMultiFx_Icons
     Assets/Icons/rotary.svg
     Assets/Icons/uni_vibe.svg
     Assets/Icons/pitch_mod.svg
+    Assets/Icons/octaver.svg
+    Assets/Icons/pitch_shift.svg
+    Assets/Icons/harmonizer.svg
 )
 
 # A real (if dev-facing, pre-touch, pre-Phase-7) GUI, not a console app --
@@ -122,6 +125,9 @@ target_sources(OpenGuitarMultiFx PRIVATE
   Source/Effects/RotaryProcessor.cpp
   Source/Effects/UniVibeProcessor.cpp
   Source/Effects/PitchModProcessor.cpp
+  Source/Effects/PitchShiftProcessor.cpp
+  Source/Effects/OctaverProcessor.cpp
+  Source/Effects/HarmonizerProcessor.cpp
   Source/UI/ChainContainer.cpp
   Source/UI/EffectBlockComponent.cpp
   Source/UI/FooterBar.cpp
