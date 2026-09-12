@@ -24,6 +24,9 @@ target_sources(OpenGuitarMultiFx_Tests PRIVATE
   AnalogDelayProcessorTests.cpp
   DualDelayProcessorTests.cpp
   MultiTapDelayProcessorTests.cpp
+  TremoloProcessorTests.cpp
+  ChorusProcessorTests.cpp
+  VibratoProcessorTests.cpp
   PingPongDelayProcessorTests.cpp
   ReverseDelayProcessorTests.cpp
   HoldProcessorTests.cpp
@@ -47,6 +50,9 @@ target_sources(OpenGuitarMultiFx_Tests PRIVATE
   ../Source/Effects/AnalogDelayProcessor.cpp
   ../Source/Effects/DualDelayProcessor.cpp
   ../Source/Effects/MultiTapDelayProcessor.cpp
+  ../Source/Effects/TremoloProcessor.cpp
+  ../Source/Effects/ChorusProcessor.cpp
+  ../Source/Effects/VibratoProcessor.cpp
   ../Source/Effects/PingPongDelayProcessor.cpp
   ../Source/Effects/ReverseDelayProcessor.cpp
   ../Source/Effects/HoldProcessor.cpp

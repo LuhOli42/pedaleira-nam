@@ -69,6 +69,9 @@ juce_add_binary_data(OpenGuitarMultiFx_Icons
     Assets/Icons/shimmer.svg
     Assets/Icons/gated.svg
     Assets/Icons/multi_tap.svg
+    Assets/Icons/tremolo.svg
+    Assets/Icons/chorus.svg
+    Assets/Icons/vibrato.svg
 )
 
 # A real (if dev-facing, pre-touch, pre-Phase-7) GUI, not a console app --
@@ -106,6 +109,9 @@ target_sources(OpenGuitarMultiFx PRIVATE
   Source/Effects/AnalogDelayProcessor.cpp
   Source/Effects/DualDelayProcessor.cpp
   Source/Effects/MultiTapDelayProcessor.cpp
+  Source/Effects/TremoloProcessor.cpp
+  Source/Effects/ChorusProcessor.cpp
+  Source/Effects/VibratoProcessor.cpp
   Source/UI/ChainContainer.cpp
   Source/UI/EffectBlockComponent.cpp
   Source/UI/FooterBar.cpp

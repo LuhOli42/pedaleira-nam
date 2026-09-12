@@ -132,6 +132,9 @@ palette now for effects that don't exist yet.
 | AnalogDelayProcessor | Delay → Analog Delay | `Assets/Icons/analog_delay.svg` (decaying rounded humps) | `Source/Effects/AnalogDelayProcessor.cpp` |
 | DualDelayProcessor | Delay → Dual Delay | `Assets/Icons/dual_delay.svg` (two offset dot-rows) | `Source/Effects/DualDelayProcessor.cpp` |
 | MultiTapDelayProcessor | Delay → Multi Tap | `Assets/Icons/multi_tap.svg` (one line, several branching taps) | `Source/Effects/MultiTapDelayProcessor.cpp` |
+| TremoloProcessor | Modulacao → Tremolo | `Assets/Icons/tremolo.svg` (wave with shrinking/growing humps) | `Source/Effects/TremoloProcessor.cpp` |
+| ChorusProcessor | Modulacao → Chorus | `Assets/Icons/chorus.svg` (two near-identical offset waves) | `Source/Effects/ChorusProcessor.cpp` |
+| VibratoProcessor | Modulacao → Vibrato | `Assets/Icons/vibrato.svg` (one wave, wobbling period) | `Source/Effects/VibratoProcessor.cpp` |
 
 **Phase 2 note (2026-09-11):** `DelayProcessor`/`TapeDelayProcessor`/
 `ReverbProcessor`/`SpringReverbProcessor` don't cover every Delay/Reverb

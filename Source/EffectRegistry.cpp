@@ -17,6 +17,9 @@
 #include "Effects/AnalogDelayProcessor.h"
 #include "Effects/DualDelayProcessor.h"
 #include "Effects/MultiTapDelayProcessor.h"
+#include "Effects/TremoloProcessor.h"
+#include "Effects/ChorusProcessor.h"
+#include "Effects/VibratoProcessor.h"
 #include "Effects/PingPongDelayProcessor.h"
 #include "Effects/ReverseDelayProcessor.h"
 #include "Effects/HoldProcessor.h"
@@ -56,6 +59,11 @@ void registerBuiltInEffects (EffectRegistry& registry)
     registry.registerType ("AnalogDelay", [] { return std::make_unique<AnalogDelayProcessor>(); });
     registry.registerType ("DualDelay", [] { return std::make_unique<DualDelayProcessor>(); });
     registry.registerType ("MultiTapDelay", [] { return std::make_unique<MultiTapDelayProcessor>(); });
+
+    // Phase 3: Modulation.
+    registry.registerType ("Tremolo", [] { return std::make_unique<TremoloProcessor>(); });
+    registry.registerType ("Chorus", [] { return std::make_unique<ChorusProcessor>(); });
+    registry.registerType ("Vibrato", [] { return std::make_unique<VibratoProcessor>(); });
     registry.registerType ("Ambient", [] { return std::make_unique<ReverbProcessor>(); });
     registry.registerType ("Spring", [] { return std::make_unique<SpringReverbProcessor>(); });
     registry.registerType ("Hall", [] { return std::make_unique<HallReverbProcessor>(); });

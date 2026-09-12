@@ -65,6 +65,8 @@ namespace
             || displayName == "Dual Delay" || displayName == "Multi Tap" || displayName == "Ping Pong"
             || displayName == "Reverse Delay" || displayName == "Hold")
             return "Delay";
+        if (displayName == "Tremolo" || displayName == "Chorus" || displayName == "Vibrato")
+            return "Modulation";
         return "Other"; // shouldn't normally happen -- a new effect type that hasn't been categorised yet
     }
 }
