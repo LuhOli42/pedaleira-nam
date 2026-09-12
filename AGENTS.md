@@ -14,7 +14,7 @@ This file exists to give context to an AI agent (Claude Code or otherwise) openi
 |------|------|-------------|
 | Realtime engine | `Source/Engine/AGENTS.md` | `AudioEngine`, `SignalGraph`, `ParameterManager`, the `DeferredReclaimer` atomic-swap primitive |
 | Effects | `Source/Effects/AGENTS.md` | `EffectProcessor` base contract + every pedal/NAM/cab subclass, `EffectRegistry` |
-| UI | `Source/UI/AGENTS.md` | Dev-facing patchbay: `RoutingGraph` (nodes/ports/cables) + `RoutingCanvas` — pulled forward from Phase 7 |
+| UI | `Source/UI/AGENTS.md` | Dev-facing chain builder (largest area, 27 files) — pulled forward from Phase 7 |
 | TONE3000 | `Source/Tone3000/AGENTS.md` | OAuth2+PKCE login, tone search/download — optional, pluggable module |
 | Presets | `Source/Presets/AGENTS.md` | Preset file I/O + stable numbering |
 
@@ -33,7 +33,7 @@ Hardware + software guitar pedalboard for live use, not a demo. **Two-legged str
 | 2 — Delay + Reverb | in progress (`DelayProcessor`, `TapeDelayProcessor`, `PingPongDelayProcessor`, `ReverseDelayProcessor`, `HoldProcessor`, `ReverbProcessor`, `SpringReverbProcessor` done; other 12 sheet variants not started) |
 | 3 — Modulation | not started |
 | 4 — Pitch | not started |
-| 5 — Looper, tuner, MIDI, advanced routing | routing partly done ahead of schedule: `RoutingGraph`/`RoutingCanvas` give real node/port/cable topology with splits and merges in the UI; hooking true parallel buses into `SignalGraph` still outstanding |
+| 5 — Looper, tuner, MIDI, advanced routing | not started |
 | 6 — Port to Radxa Cubie A7S | not started |
 | 7 — Full touch UI | not started |
 | 8–10 — Footswitches, PCB, final validation | not started |

@@ -19,7 +19,6 @@ target_sources(PedaleiraNAM_Tests PRIVATE
   PingPongDelayProcessorTests.cpp
   ReverseDelayProcessorTests.cpp
   HoldProcessorTests.cpp
-  RoutingGraphTests.cpp
   ../Source/EffectRegistry.cpp
   ../Source/Engine/SignalGraph.cpp
   ../Source/Engine/ParameterManager.cpp
@@ -35,7 +34,6 @@ target_sources(PedaleiraNAM_Tests PRIVATE
   ../Source/Effects/PingPongDelayProcessor.cpp
   ../Source/Effects/ReverseDelayProcessor.cpp
   ../Source/Effects/HoldProcessor.cpp
-  ../Source/UI/RoutingGraph.cpp
 )
 
 target_include_directories(PedaleiraNAM_Tests PRIVATE ../Source)

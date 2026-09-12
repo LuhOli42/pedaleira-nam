@@ -1,8 +1,7 @@
 #pragma once
 
+#include "ChainContainer.h"
 #include "EffectBlockComponent.h"
-#include "RoutingCanvas.h"
-#include "RoutingGraph.h"
 #include "FooterBar.h"
 #include "IOSelectorBlock.h"
 #include "OverlayHost.h"
@@ -21,16 +20,28 @@
 namespace pedaleira
 {
 
-/**
-    Dev-facing patchbay: add any registered effect onto any of four lanes
-    and cable them together however you like -- sequential, parallel,
-    split, merged. The RoutingGraph is the single source of truth for what
-    feeds what; lanes and columns only decide where a block is drawn.
+/** Plain juce::Viewport, plus a callback for when it scrolls --
+    visibleAreaChanged() is a virtual on Viewport itself (not a separate
+    Listener interface), so this exists purely to expose it as a
+    std::function MainComponent can hook without inheriting from Viewport
+    itself. Used to keep the gutter connector stubs MainComponent::paint()
+    draws (absolute-coordinate lines that touch the chain's rows) in sync
+    whenever the chain viewport scrolls -- see resized()'s comment on why
+    it can scroll at all (drawer-open padding) and the bug that motivated
+    this, fixed 2026-09-11. */
+class ChainViewport : public juce::Viewport
+{
+public:
+    std::function<void()> onScrolled;
+    void visibleAreaChanged (const juce::Rectangle<int>&) override { if (onScrolled) onScrolled(); }
+};
 
-    Replaced a strictly ordered grid (one array, position == processing
-    order) 2026-09-11, per user request: "a ordem deve surgir naturalmente
-    das conexões... eu conecto o áudio como se estivesse plugando cabos",
-    not "eu escolho a posição de cada efeito em uma lista".
+/**
+    Dev-facing chain builder: add any registered effect, in any order, as
+    many as you like (Quad Cortex's Grid is the reference point, minus
+    presets and split/merge -- those come later). This is the first thing
+    in the project that lets you SEE the chain instead of just trusting
+    that AudioEngine/SignalGraph work from test output.
 
     Ownership: MainComponent is the one persistent owner of every
     EffectProcessor for as long as it's in the chain (`chain`). SignalGraph
@@ -51,29 +62,17 @@ public:
     void resized() override;
 
 private:
-    /** Creates the processor, its block, and its graph node at lane/column.
-        Auto-cables it inline with whatever already sits to its left on the
-        same lane (and to that lane's tail otherwise) so a plain "add three
-        effects" still just works without patching by hand -- but nothing
-        stops you re-patching it afterwards. */
-    void addEffect (const juce::String& registryName, int lane = 0, int column = -1);
+    /** targetGridSlot is a grid cell (row*chainColumns+col), not an array
+        index -- see EffectBlockComponent::gridSlot's comment. < 0 (the
+        default) means "no preference, append after the highest occupied
+        slot". */
+    void addEffect (const juce::String& registryName, int targetGridSlot = -1);
     void removeEffect (EffectProcessor* processor);
     void handleBlockDragEnded (EffectBlockComponent& block);
     void selectBlock (EffectProcessor* processor);
-    /** Feeds SignalGraph from RoutingGraph::processingOrder() -- evaluation
-        order falls out of the cables, not out of any list. Parallel
-        branches are still flattened into one serial order here: real
-        split/merge DSP is the next stage (the engine work deliberately
-        deferred when this layer was built). */
     void rebuildSignalGraph();
-    void layoutNodes();
-    void showAddEffectMenu (int lane, int column);
-    /** Every block's processor, by node -- the canvas and the graph deal in
-        NodeIds, the parameter drawer and SignalGraph deal in processors. */
-    EffectProcessor* processorForNode (NodeId id) const;
-    EffectBlockComponent* blockForNode (NodeId id) const;
-    /** The rightmost effect node on `lane`, or invalidNode if it's empty. */
-    NodeId lastNodeOnLane (int lane, int beforeColumn) const;
+    void layoutChain();
+    void showAddEffectMenu (int targetGridSlot = -1);
     void showSettingsPanel();
     void showPresetsPanel();
     std::unique_ptr<juce::XmlElement> buildPresetXml() const;
@@ -103,21 +102,49 @@ private:
     };
     std::vector<RetiredProcessor> graveyard;
 
-    // The real topology. Every block on screen is a node in here; the
-    // cables between them are what SignalGraph's order is derived from.
-    RoutingGraph graph;
-    RoutingCanvas routingCanvas { graph };
+    // Chain tile size -- SQUARE (blockWidth == blockHeight always) and
+    // derived fresh in every resized() call from the available width so
+    // exactly chainColumns (8) fit across, not a fixed constant. Leftover
+    // VERTICAL space (there's almost always more of it than 4 square tiles
+    // need) becomes rowGap between rows instead of stretching the tiles
+    // into rectangles -- see resized()'s comment for the maths. Per user
+    // request 2026-09-10: "ele tem q ser quadrados n retangulos, n tem
+    // problema se tiver espaço entre eles".
+    int blockWidth = 122, blockHeight = 122;
+    int rowGap = 8;
 
-    // The hardware endpoints, as graph nodes (stereo: L/R ports each), so
-    // "what reaches the output?" is answerable by the same graph walk as
-    // everything else instead of being a special case. Created once in the
-    // constructor and never removed.
-    NodeId inputNodeId = invalidNode;
-    NodeId outputNodeId = invalidNode;
+    // How many blocks fit per row -- a fixed policy now (8), not derived
+    // from the window width the way it used to be (blockWidth is derived
+    // FROM this instead, see above) -- a row that just kept growing
+    // sideways with the window stopped reading as "one pedalboard row" per
+    // user request 2026-09-10.
+    int chainColumns = 8;
 
-    // Device I/O routing (which physical channel feeds the input node,
-    // which pair the output node lands on) -- not part of the signal
-    // graph itself. See AudioEngine's setInputChannel/setOutputRouting.
+    // How many of the up-to-maxVisibleRows rows are actually occupied right
+    // now (blocks + the add-tile) -- set by resized(), used to know which
+    // row gets the real IN tile (always row 0) and which gets the real OUT
+    // tile (always the last occupied row, not always row 0 the way a
+    // single fixed-height IO gutter used to assume). Rows in between get a
+    // "continues to next row" connector instead -- see paint().
+    int chainUsedRows = 1;
+
+    // The full-height gutter columns either side of the chain, and the Y
+    // where row 0 starts -- captured in resized() (only changes when the
+    // window itself resizes) and reused by every layoutChain() call
+    // (block add/remove/drag, not just a real window resize) to reposition
+    // IN/OUT and place the inter-row connector glyphs paint() draws.
+    juce::Rectangle<int> leftGutterColumn, rightGutterColumn;
+    int chainRowTop = 0;
+
+    ChainViewport chainViewport;
+    ChainContainer chainContainer;
+
+    // Fixed at either end of the row (outside the scrolling viewport) --
+    // device I/O routing, not part of the signal graph. See AudioEngine's
+    // setInputChannel/setOutputRouting. Positioned dynamically in
+    // resized() -- IN always sits at row 0, OUT at whichever row is
+    // currently the last occupied one (see chainUsedRows) -- rather than
+    // fixed to a single centred slot spanning every possible row.
     IOSelectorBlock inputSelector { "IN" };
     IOSelectorBlock outputSelector { "OUT" };
 

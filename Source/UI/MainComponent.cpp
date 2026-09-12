@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <map>
 #include <numeric>
-#include <set>
 
 namespace pedaleira
 {
@@ -103,39 +102,18 @@ MainComponent::MainComponent()
     // get pushed/popped (see AGENT.md's UI/UX Design Philosophy).
     addChildComponent (overlayHost);
 
-    // The two hardware endpoints exist as real graph nodes (stereo L/R),
-    // so a cable to the output is an ordinary connection and "does this
-    // reach the output?" is the same graph walk as anything else.
-    inputNodeId = graph.addNode (NodeKind::audioInput, {}, "IN", 0, 0, 0, 2);
-    outputNodeId = graph.addNode (NodeKind::audioOutput, {}, "OUT", 0, 0, 2, 0);
+    // Wraps into rows instead of growing sideways now (see layoutChain()),
+    // so it's the vertical scrollbar that's the overflow fallback.
+    chainViewport.setViewedComponent (&chainContainer, false);
+    chainViewport.setScrollBarsShown (true, false);
+    chainViewport.onScrolled = [this] { repaint(); };
+    addAndMakeVisible (chainViewport);
+    chainContainer.setMaxVisibleRows (maxVisibleRows);
 
-    addAndMakeVisible (routingCanvas);
-
-    routingCanvas.onEmptyCellClicked = [this] (int lane, int column) { showAddEffectMenu (lane, column); };
-
-    routingCanvas.onConnectionRequested = [this] (PortRef source, PortRef target)
-    {
-        graph.connect (source, target);
-        rebuildSignalGraph();
-        routingCanvas.repaint();
-    };
-
-    routingCanvas.onConnectionRemoved = [this] (ConnectionId id)
-    {
-        graph.disconnect (id);
-        rebuildSignalGraph();
-        routingCanvas.repaint();
-    };
-
-    routingCanvas.onNodeMoved = [this] (NodeId id, int lane, int column)
-    {
-        if (auto* node = graph.findNodeMutable (id))
-        {
-            node->lane = lane;
-            node->column = column;
-        }
-        layoutNodes(); // cables follow automatically -- they're drawn from live positions
-    };
+    // The only way to add a block now -- hover the grid, a "+" appears
+    // exactly under the cursor, click it. No permanent dashed-box tile
+    // sitting there all the time any more -- see ChainContainer.h.
+    chainContainer.onSlotClicked = [this] (int index) { showAddEffectMenu (index); };
 
     parameterPanel.onRemoveRequested = [this] (EffectProcessor* p) { removeEffect (p); };
     parameterPanel.setModelsDirectory (getModelsDirectory());
@@ -163,7 +141,7 @@ MainComponent::MainComponent()
     outputSelector.setOptions (outputNames, audioEngine.getOutputChannelPair() / 2);
     outputSelector.onSelectionChanged = [this] (int index) { audioEngine.setOutputChannelPair (index * 2); };
 
-    layoutNodes();
+    layoutChain();
     // ~1280x850: close to a realistic 10" touch panel candidate resolution
     // (see ARCHITECTURE.md's display section -- exact panel TBD, this is
     // our best stand-in), bumped from a plain 800 to fit the footer bar
@@ -183,38 +161,7 @@ MainComponent::~MainComponent()
     audioEngine.stop(); // must happen before chain's processors are destroyed by the member destructors below
 }
 
-EffectProcessor* MainComponent::processorForNode (NodeId id) const
-{
-    for (auto* b : blocks)
-        if (b->nodeId == id)
-            return &b->processor;
-    return nullptr;
-}
-
-EffectBlockComponent* MainComponent::blockForNode (NodeId id) const
-{
-    for (auto* b : blocks)
-        if (b->nodeId == id)
-            return b;
-    return nullptr;
-}
-
-NodeId MainComponent::lastNodeOnLane (int lane, int beforeColumn) const
-{
-    NodeId best = invalidNode;
-    int bestColumn = -1;
-
-    for (const auto& n : graph.getNodes())
-        if (n.kind == NodeKind::effect && n.lane == lane && n.column < beforeColumn && n.column > bestColumn)
-        {
-            best = n.id;
-            bestColumn = n.column;
-        }
-
-    return best;
-}
-
-void MainComponent::addEffect (const juce::String& registryName, int lane, int column)
+void MainComponent::addEffect (const juce::String& registryName, int targetGridSlot)
 {
     auto processor = registry.create (registryName);
     if (processor == nullptr)
@@ -222,108 +169,53 @@ void MainComponent::addEffect (const juce::String& registryName, int lane, int c
 
     auto* raw = processor.get();
 
-    if (column < 0)
+    // < 0 means "no preference" -- append right after the highest occupied
+    // slot, same as what clicking the "+" past the current content used to
+    // mean before slots could be sparse.
+    int slot = targetGridSlot;
+    if (slot < 0)
     {
-        // No column asked for: land right after whatever's already on this
-        // lane, so "add three effects" builds a chain without patching.
-        column = 0;
-        for (const auto& n : graph.getNodes())
-            if (n.kind == NodeKind::effect && n.lane == lane)
-                column = juce::jmax (column, n.column + 1);
+        int maxSlot = -1;
+        for (auto* b : blocks)
+            maxSlot = juce::jmax (maxSlot, b->gridSlot);
+        slot = maxSlot + 1;
     }
 
-    const auto nodeId = graph.addNode (NodeKind::effect, registryName, raw->getName(), lane, column, 1, 1);
+    // `blocks`/`chain` stay sorted ascending by gridSlot -- that sort order
+    // IS the signal processing order SignalGraph reads directly (see
+    // rebuildSignalGraph()), so a block landing at any clicked grid cell
+    // (not just the next sequential one, per user request 2026-09-10) just
+    // means finding where it falls in that order, not literally inserting
+    // at its own slot number as an array index.
+    int arrayIndex = 0;
+    while (arrayIndex < blocks.size() && blocks[arrayIndex]->gridSlot < slot)
+        ++arrayIndex;
 
-    chain.push_back (std::move (processor));
+    chain.insert (chain.begin() + arrayIndex, std::move (processor));
 
     auto block = std::make_unique<EffectBlockComponent> (*raw);
-    block->nodeId = nodeId;
+    block->gridSlot = slot;
     // Tapping the already-open block closes the drawer instead of just
     // re-opening it on itself -- same block, second tap, gone.
     block->onClicked = [this, raw] { selectBlock (selectedProcessor == raw ? nullptr : raw); };
     block->onDragEnded = [this] (EffectBlockComponent& b) { handleBlockDragEnded (b); };
-    routingCanvas.addAndMakeVisible (*block);
-    blocks.add (block.release());
-
-    // Auto-patch inline: take over whatever the previous block on this lane
-    // was feeding (or the input, for the first block on lane 0), so the
-    // common case needs no cabling -- everything stays re-patchable after.
-    const auto upstream = lastNodeOnLane (lane, column);
-    const PortRef myIn { nodeId, 0 };
-    const PortRef myOut { nodeId, 0 };
-
-    if (upstream != invalidNode)
-    {
-        // Splice in: steal the upstream's existing outgoing cable's target.
-        PortRef stolenTarget;
-        ConnectionId toRemove = invalidConnection;
-        for (const auto& c : graph.getConnections())
-            if (c.source == PortRef { upstream, 0 })
-            {
-                stolenTarget = c.target;
-                toRemove = c.id;
-                break;
-            }
-
-        if (toRemove != invalidConnection)
-            graph.disconnect (toRemove);
-
-        graph.connect ({ upstream, 0 }, myIn);
-        if (stolenTarget.isValid())
-            graph.connect (myOut, stolenTarget);
-    }
-    else
-    {
-        // First block on this lane: feed it from the input, and land it on
-        // whichever output port is still free (each input takes one cable,
-        // so lane 2's block goes to OUT R once lane 1's has taken OUT L).
-        // If both are taken the block stays unpatched on its output side --
-        // visibly dimmed, waiting for you to cable it into a merge.
-        graph.connect ({ inputNodeId, 0 }, myIn);
-
-        if (const auto* outNode = graph.findNode (outputNodeId))
-            for (int port = 0; port < outNode->numInputs; ++port)
-                if (graph.connect (myOut, { outputNodeId, port }) != invalidConnection)
-                    break;
-    }
+    chainContainer.addAndMakeVisible (*block);
+    blocks.insert (arrayIndex, block.release());
 
     rebuildSignalGraph();
-    layoutNodes();
+    layoutChain();
     selectBlock (raw);
 }
 
 void MainComponent::removeEffect (EffectProcessor* processor)
 {
-    NodeId removedNode = invalidNode;
-
     for (int i = 0; i < blocks.size(); ++i)
     {
         if (&blocks[i]->processor == processor)
         {
-            removedNode = blocks[i]->nodeId;
             blocks.remove (i);
             break;
         }
-    }
-
-    if (removedNode != invalidNode)
-    {
-        // Heal the path: if this node sat between two others, reconnect them
-        // so pulling a block out of the middle doesn't silently break the
-        // chain downstream of it.
-        PortRef feeder, fed;
-        for (const auto& c : graph.getConnections())
-        {
-            if (c.target.node == removedNode)
-                feeder = c.source;
-            else if (c.source.node == removedNode)
-                fed = c.target;
-        }
-
-        graph.removeNode (removedNode);
-
-        if (feeder.isValid() && fed.isValid())
-            graph.connect (feeder, fed);
     }
 
     for (auto it = chain.begin(); it != chain.end(); ++it)
@@ -340,7 +232,7 @@ void MainComponent::removeEffect (EffectProcessor* processor)
         selectBlock (nullptr);
 
     rebuildSignalGraph();
-    layoutNodes();
+    layoutChain();
 }
 
 void MainComponent::selectBlock (EffectProcessor* processor)
@@ -356,103 +248,143 @@ void MainComponent::selectBlock (EffectProcessor* processor)
 
 void MainComponent::rebuildSignalGraph()
 {
-    // Order comes from the cables (a topological sort of the routing
-    // graph), never from the order blocks were added or where they sit.
-    // Nodes that don't reach the output are left out entirely -- an
-    // unpatched block is audibly nothing, matching what the canvas already
-    // shows by dimming it.
-    auto signalGraph = std::make_unique<SignalGraph>();
-
-    const auto active = graph.activeNodes();
-    const std::set<NodeId> activeSet (active.begin(), active.end());
-
-    for (const auto nodeId : graph.processingOrder())
-    {
-        if (activeSet.count (nodeId) == 0)
-            continue;
-
-        if (auto* processor = processorForNode (nodeId))
-            signalGraph->addProcessor (processor);
-    }
-
-    audioEngine.setSignalGraph (std::move (signalGraph));
+    auto graph = std::make_unique<SignalGraph>();
+    for (auto& p : chain)
+        graph->addProcessor (p.get());
+    audioEngine.setSignalGraph (std::move (graph));
 }
 
-void MainComponent::layoutNodes()
+void MainComponent::layoutChain()
 {
-    // Blocks are placed purely from their node's lane/column -- the canvas
-    // owns that geometry so the ports and cables it draws always line up
-    // with the real block components sitting on top of it.
-    const auto active = graph.activeNodes();
-    const std::set<NodeId> activeSet (active.begin(), active.end());
+    // chainColumns is a fixed policy (8) now -- see the member's comment --
+    // and blockWidth/blockHeight/rowGap are derived in resized() from the
+    // available space before this runs. Wraps into rows once a row fills
+    // up, instead of growing sideways forever -- see AGENT.md's UI/UX
+    // Design Philosophy (the Quad Cortex Grid reference this is modelled
+    // on is a fixed grid, not a horizontally-scrolling strip).
+    const int viewportWidth = juce::jmax (blockWidth, chainViewport.getWidth());
+
+    // Each block is positioned by its OWN gridSlot now, not by its index in
+    // `blocks` -- a block can sit at any grid cell you clicked (per user
+    // request 2026-09-10, "ta adicionando ainda sequencialmente em vez
+    // daonde eu clico"), while `blocks`/`chain` themselves stay sorted
+    // ascending by gridSlot (see addEffect()/handleBlockDragEnded()), which
+    // is what makes that sort order double as the actual signal processing
+    // order SignalGraph reads (rebuildSignalGraph()) with no extra
+    // bookkeeping.
+    std::vector<juce::Rectangle<float>> bounds;
+    int maxSlot = -1;
 
     for (auto* block : blocks)
     {
-        if (const auto* node = graph.findNode (block->nodeId))
-            block->setBounds (routingCanvas.boundsForCell (node->lane, node->column));
-
-        // A block that isn't on a path from an input to an output is
-        // audibly doing nothing (rebuildSignalGraph() leaves it out), so it
-        // reads as dimmed -- the "where is the audio going?" question the
-        // canvas exists to answer applies to the blocks too, not just the
-        // cables.
-        block->setAlpha (activeSet.count (block->nodeId) != 0 ? 1.0f : 0.45f);
+        const int row = block->gridSlot / chainColumns;
+        const int col = block->gridSlot % chainColumns;
+        block->setBounds (col * (blockWidth + blockGap), row * (blockHeight + rowGap), blockWidth, blockHeight);
+        bounds.emplace_back (block->getBounds().toFloat());
+        maxSlot = juce::jmax (maxSlot, block->gridSlot);
     }
 
-    // IN/OUT device-routing selectors sit over the canvas's own IN/OUT
-    // node blocks (which draw the ports the cables actually land on).
-    if (routingCanvas.getWidth() > 0)
+    const int totalRows = juce::jmax (1, maxSlot / chainColumns + 1);
+    // At least maxVisibleRows tall even when real content doesn't fill that
+    // many rows yet -- otherwise the grid's dim placeholder rows
+    // (ChainContainer::paint()) would be clipped off (JUCE clips paint()
+    // to the component's own bounds). Still grows past that if there's
+    // genuinely more content (the scrollbar fallback).
+    const int drawnRows = juce::jmax (totalRows, maxVisibleRows);
+    chainContainer.setSize (viewportWidth, drawnRows * (blockHeight + rowGap) - rowGap);
+    chainContainer.setRowMetrics (chainColumns, blockWidth, blockHeight, blockGap, rowGap);
+    chainContainer.setBlockBounds (std::move (bounds));
+
+    // IN always sits at row 0; OUT sits at whichever row is currently the
+    // LAST occupied one (by gridSlot, which can be sparse -- an empty row
+    // below some real content still counts as "not the last occupied one"
+    // even if it has nothing in it), not a single slot centred across
+    // every possible row -- rows in between get a "continues" connector
+    // glyph instead, drawn in paint(). Reuses
+    // leftGutterColumn/rightGutterColumn/chainRowTop, which only change on
+    // an actual window resize (see resized()), so this stays correct when
+    // called from addEffect()/removeEffect()/handleBlockDragEnded() too --
+    // none of which trigger a full resized() pass. Per user request
+    // 2026-09-10 (Quad Cortex-style multi-row IN/OUT routing).
+    chainUsedRows = juce::jlimit (1, maxVisibleRows, totalRows);
+    chainContainer.setUsedRows (chainUsedRows);
+
+    auto gutterRowSlot = [&] (juce::Rectangle<int> gutterColumn, int row)
     {
-        const auto canvasArea = routingCanvas.getBounds();
-        inputSelector.setBounds (juce::Rectangle<int> (canvasArea.getX() + 8, canvasArea.getCentreY() - ioHeight / 2,
-                                                        ioWidth, ioHeight));
-        outputSelector.setBounds (juce::Rectangle<int> (canvasArea.getRight() - ioWidth - 8,
-                                                         canvasArea.getCentreY() - ioHeight / 2, ioWidth, ioHeight));
-    }
+        return juce::Rectangle<int> (gutterColumn.getX(), chainRowTop + row * (blockHeight + rowGap),
+                                      gutterColumn.getWidth(), blockHeight);
+    };
 
-    routingCanvas.repaint();
+    inputSelector.setBounds (gutterRowSlot (leftGutterColumn, 0).withSizeKeepingCentre (ioWidth, ioHeight));
+    outputSelector.setBounds (gutterRowSlot (rightGutterColumn, chainUsedRows - 1).withSizeKeepingCentre (ioWidth, ioHeight));
+
+    repaint(); // the inter-row connector glyphs paint() draws depend on chainUsedRows
 }
 
 void MainComponent::handleBlockDragEnded (EffectBlockComponent& blockComp)
 {
     if (blocks.indexOf (&blockComp) < 0)
     {
-        layoutNodes();
+        layoutChain();
         return;
     }
 
-    // Where it was dropped, translated into a lane/column. This moves the
-    // block ONLY -- its cables stay exactly as they were and simply follow
-    // it, because the topology lives in the graph, not in the position
-    // (the whole point of the 2026-09-11 routing rework).
+    // Where it was dropped, translated back into a grid cell -- row from Y
+    // now that dragging isn't locked to one row anymore, column from X,
+    // same as layoutChain()'s own row/col math. Not clamped to existing
+    // content -- you can drag a block onto any empty cell, same as adding
+    // one there (see EffectBlockComponent::gridSlot's comment).
     const auto centre = blockComp.getBounds().getCentre();
-    int lane = 0, column = 0;
-    routingCanvas.cellForPosition (centre, lane, column);
+    const int row = juce::jlimit (0, maxVisibleRows - 1, centre.y / (blockHeight + rowGap));
+    const int col = juce::jlimit (0, chainColumns - 1, centre.x / (blockWidth + blockGap));
+    const int targetSlot = row * chainColumns + col;
 
-    if (auto* node = graph.findNodeMutable (blockComp.nodeId))
+    if (targetSlot != blockComp.gridSlot)
     {
-        // Dropped onto an occupied cell: swap places, rather than stacking
-        // two blocks on top of each other.
-        for (const auto& other : graph.getNodes())
-            if (other.kind == NodeKind::effect && other.id != node->id
-                && other.lane == lane && other.column == column)
+        // Dropped onto an already-occupied cell -- swap slots with whatever
+        // was there instead of silently refusing the drop.
+        for (auto* other : blocks)
+        {
+            if (other != &blockComp && other->gridSlot == targetSlot)
             {
-                if (auto* otherNode = graph.findNodeMutable (other.id))
-                {
-                    otherNode->lane = node->lane;
-                    otherNode->column = node->column;
-                }
+                other->gridSlot = blockComp.gridSlot;
                 break;
             }
+        }
+        blockComp.gridSlot = targetSlot;
 
-        node->lane = lane;
-        node->column = column;
+        // `blocks`/`chain` must stay sorted ascending by gridSlot -- that
+        // sort order IS the signal processing order (see
+        // rebuildSignalGraph()) -- so re-sort both, in lockstep, by the
+        // same permutation rather than the old std::rotate (which only
+        // made sense when "move to array index N" and "move to grid slot
+        // N" were the same thing).
+        std::vector<int> order ((size_t) blocks.size());
+        std::iota (order.begin(), order.end(), 0);
+        std::sort (order.begin(), order.end(),
+                    [this] (int a, int b) { return blocks[a]->gridSlot < blocks[b]->gridSlot; });
+
+        std::vector<std::unique_ptr<EffectProcessor>> newChain;
+        newChain.reserve (chain.size());
+        juce::Array<EffectBlockComponent*> newBlockOrder;
+        for (int i : order)
+        {
+            newChain.push_back (std::move (chain[(size_t) i]));
+            newBlockOrder.add (blocks[i]);
+        }
+        chain = std::move (newChain);
+
+        blocks.clearQuick (false); // releases ownership without deleting -- newBlockOrder already holds every pointer
+        for (auto* b : newBlockOrder)
+            blocks.add (b);
+
+        rebuildSignalGraph();
     }
 
-    layoutNodes(); // snaps the dragged block back onto the lane grid
+    layoutChain(); // snaps every block, including the dragged one, back onto the clean grid
 }
 
-void MainComponent::showAddEffectMenu (int lane, int column)
+void MainComponent::showAddEffectMenu (int targetGridSlot)
 {
     auto keys = registry.getRegisteredNames();
 
@@ -498,10 +430,10 @@ void MainComponent::showAddEffectMenu (int lane, int column)
     // Big is fine -- comfortable to tap on a 10" touchscreen matters more
     // than compactness (see AGENT.md's UI/UX Design Philosophy).
     menu.showMenuAsync (juce::PopupMenu::Options().withStandardItemHeight (touch::minTapTarget),
-        [this, idToKey, lane, column] (int result)
+        [this, idToKey, targetGridSlot] (int result)
         {
             if (result > 0 && result - 1 < (int) idToKey.size())
-                addEffect (idToKey[(size_t) result - 1], lane, column);
+                addEffect (idToKey[(size_t) result - 1], targetGridSlot);
         });
 }
 
@@ -613,17 +545,12 @@ std::unique_ptr<juce::XmlElement> MainComponent::buildPresetXml() const
         blockXml->setAttribute ("key", key);
         blockXml->setAttribute ("bypassed", p->isBypassed());
         // `blocks[i]` is `chain[i]`'s UI counterpart -- always true, they're
-        // kept in lockstep everywhere (see AGENTS.md). The node id ties this
-        // block to its entry in the routing graph serialised below, which is
-        // what actually carries the topology now.
-        blockXml->setAttribute ("nodeId", blocks[i]->nodeId);
+        // kept in lockstep everywhere (see AGENTS.md). gridSlot is its grid
+        // cell, which can be sparse now (not necessarily == i) -- see
+        // EffectBlockComponent::gridSlot's comment.
+        blockXml->setAttribute ("gridSlot", blocks[i]->gridSlot);
         blockXml->addChildElement (p->getState().release());
     }
-
-    // The topology itself: nodes + cables. Saved alongside (not instead of)
-    // the blocks, because the blocks carry each processor's own parameter
-    // state while the graph carries what feeds what.
-    xml->addChildElement (graph.toXml().release());
 
     auto* ioXml = xml->createNewChildElement ("IO");
     ioXml->setAttribute ("inputChannel", audioEngine.getInputChannel());
@@ -636,7 +563,7 @@ void MainComponent::applyPresetXml (const juce::XmlElement& xml)
 {
     // Tear the current chain down the same way removeEffect() would, one
     // block at a time, so nothing bypasses the graveyard/DeferredReclaimer
-    // discipline (rebuildSignalGraph()/layoutNodes() re-run every
+    // discipline (rebuildSignalGraph()/layoutChain() re-run every
     // iteration -- wasteful but this only ever happens from a menu tap,
     // never the audio thread).
     while (! blocks.isEmpty())
@@ -660,28 +587,14 @@ void MainComponent::applyPresetXml (const juce::XmlElement& xml)
         chain.push_back (std::move (processor));
 
         auto block = std::make_unique<EffectBlockComponent> (*raw);
-        block->nodeId = blockXml->getIntAttribute ("nodeId", invalidNode);
+        // Falls back to `blocks.size()` (this block's about-to-be array
+        // index) for presets saved before gridSlot existed -- same
+        // contiguous layout they always had.
+        block->gridSlot = blockXml->getIntAttribute ("gridSlot", blocks.size());
         block->onClicked = [this, raw] { selectBlock (selectedProcessor == raw ? nullptr : raw); };
         block->onDragEnded = [this] (EffectBlockComponent& b) { handleBlockDragEnded (b); };
-        routingCanvas.addAndMakeVisible (*block);
+        chainContainer.addAndMakeVisible (*block);
         blocks.add (block.release());
-    }
-
-    // Restore the topology, then re-find the two hardware endpoints in it
-    // (their ids come from the saved graph, not from this session's
-    // constructor, so the members have to follow).
-    if (auto* graphXml = xml.getChildByName ("RoutingGraph"))
-    {
-        graph.fromXml (*graphXml);
-
-        inputNodeId = outputNodeId = invalidNode;
-        for (const auto& n : graph.getNodes())
-        {
-            if (n.kind == NodeKind::audioInput)
-                inputNodeId = n.id;
-            else if (n.kind == NodeKind::audioOutput)
-                outputNodeId = n.id;
-        }
     }
 
     if (auto* ioXml = xml.getChildByName ("IO"))
@@ -695,7 +608,7 @@ void MainComponent::applyPresetXml (const juce::XmlElement& xml)
     }
 
     rebuildSignalGraph();
-    layoutNodes();
+    layoutChain();
 }
 
 void MainComponent::timerCallback()
@@ -748,13 +661,31 @@ void MainComponent::resized()
     // any more, per user request 2026-09-10 ("a aba que tem os knobs...
     // vai sobrepor as linhas").
     //
-    // The patchbay canvas fills ALL of it -- the parameter drawer, when
-    // open, OVERLAYS the bottom portion instead of shrinking this area,
-    // per user request 2026-09-10 ("a aba que tem os knobs... vai sobrepor
-    // as linhas"). The canvas itself works out lane heights and column
-    // widths from these bounds (RoutingCanvas::resized()).
-    routingCanvas.setBounds (area);
-    layoutNodes();
+    // Tiles are SQUARE (blockWidth == blockHeight) sized so exactly
+    // chainColumns (8) fit the available width, per user request
+    // 2026-09-10 ("ele tem q ser quadrados n retangulos"). Almost always
+    // more vertical room than 4 square tiles need, though -- rather than
+    // stretch them into rectangles again, that leftover becomes rowGap
+    // between rows instead ("n tem problema se tiver espaço entre eles"),
+    // so the 4-row BLOCK as a whole still spans the full height even
+    // though the individual tiles stay a sensible size.
+    const int chainContentWidth = area.getWidth() - 2 * ioWidth - 16; // the two 8px gaps after each gutter
+    blockWidth = juce::jmax (60, (chainContentWidth - (chainColumns - 1) * blockGap) / chainColumns);
+    blockHeight = blockWidth;
+
+    const int rowsContentHeight = maxVisibleRows * blockHeight;
+    const int leftoverHeight = area.getHeight() - 12 - rowsContentHeight; // the -12 mirrors the old fudge-padding
+    rowGap = leftoverHeight > (maxVisibleRows - 1) * blockGap ? leftoverHeight / (maxVisibleRows - 1) : blockGap;
+
+    auto chainRow = area;
+    chainRowTop = chainRow.getY();
+
+    leftGutterColumn = chainRow.removeFromLeft (ioWidth);
+    chainRow.removeFromLeft (8);
+    rightGutterColumn = chainRow.removeFromRight (ioWidth);
+    chainRow.removeFromRight (8);
+    chainViewport.setBounds (chainRow);
+    layoutChain();
 
     // The detail drawer only exists once a block is selected. Its height
     // fits whatever the current processor actually needs (so a 1-2 knob
@@ -778,20 +709,112 @@ void MainComponent::resized()
     parameterPanel.setVisible (panelHeight > 0);
     if (panelHeight > 0)
     {
-        parameterPanel.toFront (false); // overlays the canvas -- must paint after it
+        parameterPanel.toFront (false); // overlays the chain -- must paint after it, see chainViewport's add order
+
+        // The drawer covers the bottom panelHeight px of the SAME chain
+        // area it overlays (see above) without shrinking chainViewport's
+        // own bounds -- so without this, any row underneath it would just
+        // be permanently hidden with no way to reach it. Padding
+        // chainContainer's content height by exactly the covered amount
+        // gives the viewport genuine scrollable overflow: scrolling up
+        // shifts the covered row(s) into the visible, non-overlaid part of
+        // the same viewport rectangle. Per user request 2026-09-11
+        // ("quando abrir tipo o tab por cima... coloca em ver um
+        // scrollbar").
+        chainContainer.setSize (chainContainer.getWidth(), chainContainer.getHeight() + panelHeight);
     }
+
+    // Closing the drawer shrinks chainContainer back down (the padding
+    // above only applies while panelHeight > 0), but the viewport's
+    // current scroll position doesn't necessarily snap back to 0 on its
+    // own in the same call -- left stale for one frame, getViewPositionY()
+    // in paint()'s connector code would read a leftover non-zero offset
+    // against content that no longer has anywhere for it to point,
+    // visibly detaching the connector from the rows it's supposed to
+    // touch. Explicitly clamped here so it's never stale. Fixed 2026-09-11
+    // ("lado direito ali ainda ta bugado").
+    chainViewport.setViewPosition (chainViewport.getViewPositionX(),
+                                    juce::jlimit (0, juce::jmax (0, chainContainer.getHeight() - chainViewport.getHeight()),
+                                                  chainViewport.getViewPositionY()));
 }
 
 void MainComponent::paint (juce::Graphics& g)
 {
     g.fillAll (juce::Colour (0xff141414));
 
-    // The signal path itself is no longer drawn here at all: it's cables
-    // between ports, drawn by RoutingCanvas from the graph. The old
-    // inter-row connector stubs this used to draw only made sense while
-    // "the chain" was a strictly ordered grid that wrapped from the end of
-    // one row to the start of the next -- with real routing there is no
-    // such implicit row-to-row link to draw.
+    // Inter-row connectors: every row before the last occupied one connects
+    // to the start of the next with ONE continuous line -- down through the
+    // right gutter, across through ChainContainer's own seam line (drawn in
+    // its paint(), same Y, spanning its full width so the two halves meet
+    // exactly at its edges), then down into the left gutter -- rather than
+    // two disconnected glyphs. Per user correction 2026-09-10 ("as linhas
+    // se conectarem do final com o início da próxima"). Built as ONE Path
+    // per side with a rounded corner at the bend (PathStrokeType::curved
+    // plus an explicit quadraticTo) rather than two separate drawLine()
+    // calls -- those left a visible notch at the joint (flat line caps
+    // don't overlap cleanly at a right angle) and read as sharp/square
+    // rather than the rounded look asked for -- per user correction
+    // 2026-09-11 ("falta fechar a linha, tamos com um gap ali... deixa
+    // mais redondo"). Same white-at-30% line language as ChainContainer's
+    // own lines throughout.
+    g.setColour (juce::Colours::white.withAlpha (0.3f));
+
+    // A visible vertical scrollbar sits on top of the viewport's own right
+    // edge -- without backing off from it, the connector's rightmost reach
+    // (and ChainContainer's own seam line, which shares this same edge)
+    // would render partly underneath it. See resized()'s comment on why a
+    // scrollbar can now appear here at all (extra scroll padding while the
+    // drawer overlay is open).
+    const bool scrollbarShowing = chainViewport.getVerticalScrollBar().isVisible();
+    const float scrollbarInset = scrollbarShowing ? (float) chainViewport.getScrollBarThickness() : 0.0f;
+    const float rightEdge = (float) chainViewport.getRight() - scrollbarInset;
+    const float leftEdge = (float) chainViewport.getX();
+    constexpr float cornerRadius = 10.0f;
+
+    // The rows themselves live inside chainViewport and move when it's
+    // scrolled (see resized()'s comment on the drawer-open scroll
+    // padding); these stub coordinates are absolute/unscrolled, so the
+    // current scroll position has to be subtracted to stay lined up with
+    // wherever the content actually is right now -- kept in sync via
+    // visibleAreaChanged() triggering a repaint(). Fixed 2026-09-11 (was
+    // the cause of a small but real gap between the stub and the row it's
+    // supposed to touch whenever the chain had scrolled at all).
+    const int scrollOffset = chainViewport.getViewPositionY();
+
+    for (int row = 0; row < chainUsedRows - 1; ++row)
+    {
+        const float seamY = (float) chainRowTop + (float) row * (float) (blockHeight + rowGap)
+                             + (float) blockHeight + (float) rowGap * 0.5f - (float) scrollOffset;
+        const float fromY = (float) chainRowTop + (float) row * (float) (blockHeight + rowGap) + (float) blockHeight * 0.5f - (float) scrollOffset;
+        const float toY   = (float) chainRowTop + (float) (row + 1) * (float) (blockHeight + rowGap) + (float) blockHeight * 0.5f - (float) scrollOffset;
+
+        const float rightX = (float) rightGutterColumn.getCentreX();
+        juce::Path rightSide;
+        rightSide.startNewSubPath (rightX, fromY);
+        rightSide.lineTo (rightX, seamY - cornerRadius);
+        rightSide.quadraticTo (rightX, seamY, rightX + cornerRadius, seamY);
+        rightSide.lineTo (rightEdge, seamY);
+        g.strokePath (rightSide, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+
+        // Two bends, not one: down into the gutter at the seam (matching
+        // the visual weight of the IN/OUT tile column, per the original
+        // sketch), THEN back out of the gutter at row+1's own centreline
+        // to meet ChainContainer's row line there. The second bend was
+        // missing entirely before -- the path just stopped at (leftX, toY)
+        // with nothing connecting it back to the container's own line,
+        // which was the actual cause of the visible gap fixed 2026-09-11
+        // (the scroll-offset fix above was real but not sufficient on its
+        // own -- this was the other half of it).
+        const float leftX = (float) leftGutterColumn.getCentreX();
+        juce::Path leftSide;
+        leftSide.startNewSubPath (leftEdge, seamY);
+        leftSide.lineTo (leftX + cornerRadius, seamY);
+        leftSide.quadraticTo (leftX, seamY, leftX, seamY + cornerRadius);
+        leftSide.lineTo (leftX, toY - cornerRadius);
+        leftSide.quadraticTo (leftX, toY, leftX + cornerRadius, toY);
+        leftSide.lineTo (leftEdge, toY);
+        g.strokePath (leftSide, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    }
 }
 
 } // namespace pedaleira
