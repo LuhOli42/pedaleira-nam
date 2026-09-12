@@ -1020,7 +1020,16 @@ void MainComponent::resized()
     // between rows instead ("n tem problema se tiver espaço entre eles"),
     // so the 4-row BLOCK as a whole still spans the full height even
     // though the individual tiles stay a sensible size.
-    const int chainContentWidth = area.getWidth() - 2 * ioWidth - 16; // the two 8px gaps after each gutter
+    // Every strip that comes out of `area` before the 8-column grid gets
+    // whatever's left: the scrollbar (+ its 6px gap), then the two gutters
+    // (each ioWidth + cableLane, the cable lane added to keep row-to-row
+    // connectors off the endpoint tiles -- see its member comment) plus
+    // their two 8px gaps. This has to stay in sync with every actual
+    // removeFrom*() below it -- missing the cableLane term (and, before
+    // that, the scrollbar entirely) made every block a few px too wide,
+    // which is why the 8th column kept getting clipped by the viewport
+    // (user report 2026-09-12, "o 8 bloco ta cortando").
+    const int chainContentWidth = area.getWidth() - (touch::minTapTarget + 6) - 2 * (ioWidth + cableLane) - 16;
     blockWidth = juce::jmax (60, (chainContentWidth - (chainColumns - 1) * blockGap) / chainColumns);
     blockHeight = blockWidth;
 
@@ -1032,8 +1041,16 @@ void MainComponent::resized()
     chainRowTop = chainRow.getY();
 
     // Scrollbar first, off the far right of the window -- everything else
-    // (gutters, viewport) lays out inside what's left.
-    constexpr int scrollBarWidth = 10;
+    // (gutters, viewport) lays out inside what's left. touch::minTapTarget,
+    // not an arbitrary thin strip: a desktop scrollbar can get away with a
+    // few px because a mouse is precise, but this project's own rule is
+    // every interactive element meets the real touch target size, and this
+    // is draggable, not just tappable, so missing the earlier 10px was very
+    // easy on the touch panel this is ultimately built for -- almost
+    // certainly why an otherwise-correctly-wired scrollbar still didn't
+    // seem to do anything (user report 2026-09-12, "n ta dando pra
+    // scrollar ainda").
+    const int scrollBarWidth = touch::minTapTarget;
     chainScrollBar.setBounds (chainRow.removeFromRight (scrollBarWidth));
     chainRow.removeFromRight (6);
 
@@ -1067,6 +1084,15 @@ void MainComponent::resized()
     if (panelHeight > 0)
     {
         parameterPanel.toFront (false); // overlays the chain -- must paint after it, see chainViewport's add order
+
+        // The drawer spans the window's FULL width, including the strip on
+        // the far right where chainScrollBar lives -- toFront() above put
+        // the drawer on top of it, which blocked both seeing it and
+        // clicking it while the drawer was open (user report 2026-09-11:
+        // "quando abrir o menu que fica por cima, não conseguimos scrolar
+        // e ver as linhas 3/4"). Bringing the scrollbar forward again keeps
+        // it usable regardless of the drawer's own z-order.
+        chainScrollBar.toFront (false);
 
         // The drawer covers the bottom panelHeight px of the SAME chain
         // area it overlays (see above) without shrinking chainViewport's
