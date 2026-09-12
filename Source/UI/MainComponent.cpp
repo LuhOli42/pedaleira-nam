@@ -63,7 +63,7 @@ namespace
             return "Reverb";
         if (displayName == "Digital Delay" || displayName == "Tape Delay" || displayName == "Analog Delay"
             || displayName == "Dual Delay" || displayName == "Multi Tap" || displayName == "Ping Pong"
-            || displayName == "Reverse Delay" || displayName == "Hold")
+            || displayName == "Reverse Delay" || displayName == "Hold" || displayName == "Looper")
             return "Delay";
         if (displayName == "Tremolo" || displayName == "Chorus" || displayName == "Vibrato"
             || displayName == "Flanger" || displayName == "Phaser" || displayName == "Rotary"

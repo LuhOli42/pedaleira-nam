@@ -80,6 +80,7 @@ juce_add_binary_data(OpenGuitarMultiFx_Icons
     Assets/Icons/octaver.svg
     Assets/Icons/pitch_shift.svg
     Assets/Icons/harmonizer.svg
+    Assets/Icons/looper.svg
 )
 
 # A real (if dev-facing, pre-touch, pre-Phase-7) GUI, not a console app --
@@ -128,6 +129,7 @@ target_sources(OpenGuitarMultiFx PRIVATE
   Source/Effects/PitchShiftProcessor.cpp
   Source/Effects/OctaverProcessor.cpp
   Source/Effects/HarmonizerProcessor.cpp
+  Source/Effects/LooperProcessor.cpp
   Source/UI/ChainContainer.cpp
   Source/UI/EffectBlockComponent.cpp
   Source/UI/FooterBar.cpp

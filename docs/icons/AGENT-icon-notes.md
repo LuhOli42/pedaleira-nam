@@ -143,6 +143,7 @@ palette now for effects that don't exist yet.
 | PitchShiftProcessor | Filtro/FX → Pitch Shift | `Assets/Icons/pitch_shift.svg` (one note moving to a new position via a single arrow) | `Source/Effects/PitchShiftProcessor.cpp` |
 | OctaverProcessor | Filtro/FX → Octaver | `Assets/Icons/octaver.svg` (same wave twice, dotted one at double wavelength) | `Source/Effects/OctaverProcessor.cpp` |
 | HarmonizerProcessor | Filtro/FX → Harmonizer | `Assets/Icons/harmonizer.svg` (two notes on one stem, sounding together) | `Source/Effects/HarmonizerProcessor.cpp` |
+| LooperProcessor | Delay → Looper | `Assets/Icons/looper.svg` (a near-complete circular repeat arrow, no centre dot -- distinct from Rotary's partial arc + dot) | `Source/Effects/LooperProcessor.cpp` |
 
 **Phase 2 note (2026-09-11):** `DelayProcessor`/`TapeDelayProcessor`/
 `ReverbProcessor`/`SpringReverbProcessor` don't cover every Delay/Reverb

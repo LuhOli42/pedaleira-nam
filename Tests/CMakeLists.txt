@@ -35,6 +35,7 @@ target_sources(OpenGuitarMultiFx_Tests PRIVATE
   PitchShiftProcessorTests.cpp
   OctaverProcessorTests.cpp
   HarmonizerProcessorTests.cpp
+  LooperProcessorTests.cpp
   PingPongDelayProcessorTests.cpp
   ReverseDelayProcessorTests.cpp
   HoldProcessorTests.cpp
@@ -69,6 +70,7 @@ target_sources(OpenGuitarMultiFx_Tests PRIVATE
   ../Source/Effects/PitchShiftProcessor.cpp
   ../Source/Effects/OctaverProcessor.cpp
   ../Source/Effects/HarmonizerProcessor.cpp
+  ../Source/Effects/LooperProcessor.cpp
   ../Source/Effects/PingPongDelayProcessor.cpp
   ../Source/Effects/ReverseDelayProcessor.cpp
   ../Source/Effects/HoldProcessor.cpp
