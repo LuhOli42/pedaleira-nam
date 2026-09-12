@@ -1,8 +1,8 @@
 #include "ChainContainer.h"
 
-#include "PedaleiraLookAndFeel.h"
+#include "OpenGuitarMultiFxLookAndFeel.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 void ChainContainer::setBlockBounds (std::vector<juce::Rectangle<float>> bounds)
@@ -118,7 +118,7 @@ void ChainContainer::paint (juce::Graphics& g)
     if (hoveredIndex >= 0)
     {
         const auto bounds = cellBounds (hoveredIndex).reduced (4.0f);
-        const auto accent = PedaleiraLookAndFeel::getAppAccentColour();
+        const auto accent = OpenGuitarMultiFxLookAndFeel::getAppAccentColour();
 
         g.setColour (accent.withAlpha (0.12f));
         g.fillRoundedRectangle (bounds, 8.0f);
@@ -133,4 +133,4 @@ void ChainContainer::paint (juce::Graphics& g)
     }
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

@@ -1,6 +1,6 @@
 #include "OverlayHost.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 OverlayHost::OverlayHost()
@@ -86,4 +86,4 @@ void OverlayHost::mouseUp (const juce::MouseEvent&)
     popOverlay();
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

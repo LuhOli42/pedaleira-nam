@@ -1,6 +1,6 @@
 #include "SignalGraph.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 void SignalGraph::addProcessor (EffectProcessor* processor)
@@ -27,4 +27,4 @@ void SignalGraph::reset()
         p->reset();
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

@@ -1,6 +1,6 @@
 #include "AudioEngine.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 namespace
@@ -237,4 +237,4 @@ juce::StringArray AudioEngine::getAvailableOutputPairNames() const
     return pairs;
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

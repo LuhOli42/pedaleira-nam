@@ -7,7 +7,7 @@
 #include <memory>
 #include <vector>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -158,4 +158,4 @@ private:
     std::shared_ptr<std::atomic<bool>> aliveFlag = std::make_shared<std::atomic<bool>> (true);
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

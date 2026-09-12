@@ -2,7 +2,7 @@
 
 #include <juce_core/juce_core.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 namespace
@@ -66,4 +66,4 @@ public:
 
 static DeferredReclaimerTests deferredReclaimerTests;
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

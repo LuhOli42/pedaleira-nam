@@ -2,7 +2,7 @@
 
 #include <juce_core/juce_core.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 namespace
@@ -93,4 +93,4 @@ public:
 
 static SignalGraphTests signalGraphTests;
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

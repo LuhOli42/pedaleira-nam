@@ -3,7 +3,7 @@
 
 #include <IconData.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 ReverbProcessor::ReverbProcessor()
@@ -68,4 +68,4 @@ void ReverbProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) con
     icon::drawSvg (g, b, svg.get());
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

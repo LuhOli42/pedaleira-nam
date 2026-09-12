@@ -1,6 +1,6 @@
 #include "EffectBlockComponent.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 EffectBlockComponent::EffectBlockComponent (EffectProcessor& processorToShow)
@@ -108,4 +108,4 @@ void EffectBlockComponent::paint (juce::Graphics& g)
     g.drawFittedText (processor.getName(), nameArea.toNearestInt(), juce::Justification::centred, 2);
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

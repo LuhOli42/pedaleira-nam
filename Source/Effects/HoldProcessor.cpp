@@ -3,7 +3,7 @@
 
 #include <IconData.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 HoldProcessor::HoldProcessor()
@@ -100,4 +100,4 @@ void HoldProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
     icon::drawSvg (g, b, svg.get());
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

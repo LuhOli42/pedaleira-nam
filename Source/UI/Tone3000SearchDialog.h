@@ -7,7 +7,7 @@
 #include <functional>
 #include <vector>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -65,4 +65,4 @@ private:
     std::vector<Tone3000Manager::Tone> results;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

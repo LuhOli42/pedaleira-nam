@@ -2,7 +2,7 @@
 
 #include <juce_core/juce_core.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 class GateProcessorTests : public juce::UnitTest
@@ -49,4 +49,4 @@ public:
 
 static GateProcessorTests gateProcessorTests;
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

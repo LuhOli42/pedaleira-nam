@@ -4,7 +4,7 @@
 
 #include <juce_events/juce_events.h> // MessageManager::callAsync
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 namespace
@@ -45,7 +45,7 @@ void Tone3000Manager::logOut()
 juce::File Tone3000Manager::getAuthFile() const
 {
     return juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory)
-               .getChildFile ("PedaleiraNAM")
+               .getChildFile ("OpenGuitarMultiFx")
                .getChildFile ("tone3000_auth.json");
 }
 
@@ -476,4 +476,4 @@ void Tone3000Manager::downloadFirstModelForTone (int toneId,
     });
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

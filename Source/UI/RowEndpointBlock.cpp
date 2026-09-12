@@ -1,6 +1,6 @@
 #include "RowEndpointBlock.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 void RowEndpointBlock::setDisplay (juce::String labelText, juce::String detailText)
@@ -51,4 +51,4 @@ void RowEndpointBlock::paint (juce::Graphics& g)
     g.drawFittedText (detail, bounds.reduced (4.0f).toNearestInt(), juce::Justification::centredBottom, 2);
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

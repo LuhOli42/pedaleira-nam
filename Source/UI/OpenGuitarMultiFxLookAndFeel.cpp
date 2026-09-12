@@ -1,11 +1,11 @@
-#include "PedaleiraLookAndFeel.h"
+#include "OpenGuitarMultiFxLookAndFeel.h"
 
 #include <BinaryData.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
-PedaleiraLookAndFeel::PedaleiraLookAndFeel()
+OpenGuitarMultiFxLookAndFeel::OpenGuitarMultiFxLookAndFeel()
 {
     regular   = juce::Typeface::createSystemTypefaceFor (BinaryData::SoraRegular_ttf,
                                                            (size_t) BinaryData::SoraRegular_ttfSize);
@@ -64,7 +64,7 @@ PedaleiraLookAndFeel::PedaleiraLookAndFeel()
     setColour (accentColourId, accent);
 }
 
-juce::Typeface::Ptr PedaleiraLookAndFeel::getTypefaceForFont (const juce::Font& font)
+juce::Typeface::Ptr OpenGuitarMultiFxLookAndFeel::getTypefaceForFont (const juce::Font& font)
 {
     // A real bold file, not JUCE's algorithmic embolden of the regular
     // weight -- looks meaningfully better, especially at the large sizes
@@ -72,19 +72,19 @@ juce::Typeface::Ptr PedaleiraLookAndFeel::getTypefaceForFont (const juce::Font& 
     return font.isBold() ? bold : regular;
 }
 
-juce::Font PedaleiraLookAndFeel::getPopupMenuFont()
+juce::Font OpenGuitarMultiFxLookAndFeel::getPopupMenuFont()
 {
     return juce::Font (juce::FontOptions (20.0f));
 }
 
-juce::Label* PedaleiraLookAndFeel::createSliderTextBox (juce::Slider& slider)
+juce::Label* OpenGuitarMultiFxLookAndFeel::createSliderTextBox (juce::Slider& slider)
 {
     auto* label = LookAndFeel_V4::createSliderTextBox (slider);
     label->setFont (juce::Font (juce::FontOptions (17.0f, juce::Font::bold)));
     return label;
 }
 
-void PedaleiraLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& button,
+void OpenGuitarMultiFxLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& button,
                                                   const juce::Colour& backgroundColour,
                                                   bool shouldDrawButtonAsHighlighted,
                                                   bool shouldDrawButtonAsDown)
@@ -122,4 +122,4 @@ void PedaleiraLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button
     g.drawRoundedRectangle (bounds, cornerSize, 1.2f);
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

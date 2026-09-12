@@ -5,7 +5,7 @@
 
 #include <cmath>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 PingPongDelayProcessor::PingPongDelayProcessor()
@@ -117,4 +117,4 @@ void PingPongDelayProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float>
     icon::drawSvg (g, b, svg.get());
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

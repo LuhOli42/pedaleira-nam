@@ -6,7 +6,7 @@
 #include <atomic>
 #include <memory>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -86,4 +86,4 @@ private:
     std::atomic<bool> bypassed { false };
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

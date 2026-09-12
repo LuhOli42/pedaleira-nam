@@ -2,7 +2,7 @@
 
 #include <juce_core/juce_core.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 class ReverbProcessorTests : public juce::UnitTest
@@ -67,4 +67,4 @@ public:
 
 static ReverbProcessorTests reverbProcessorTests;
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

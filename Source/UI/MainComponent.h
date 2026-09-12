@@ -18,7 +18,7 @@
 #include <memory>
 #include <vector>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /** Plain juce::Viewport, plus a callback for when it scrolls --
@@ -266,4 +266,4 @@ private:
     OverlayHost overlayHost;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

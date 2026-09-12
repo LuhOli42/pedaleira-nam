@@ -7,7 +7,7 @@
 
 #include <atomic>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -91,4 +91,4 @@ private:
     juce::AudioBuffer<float> dryScratch;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

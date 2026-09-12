@@ -5,7 +5,7 @@
 #include <functional>
 #include <memory>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -57,4 +57,4 @@ private:
     std::unique_ptr<juce::FileChooser> fileChooser; // kept alive for the async picker
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

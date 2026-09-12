@@ -3,7 +3,7 @@
 #include "EffectProcessor.h"
 #include "EnvelopeFollower.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -36,4 +36,4 @@ private:
     EnvelopeFollower gainSmoother;  // timing == the Attack/Release parameters above
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

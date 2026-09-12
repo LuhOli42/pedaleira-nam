@@ -2,7 +2,7 @@
 
 #include <juce_core/juce_core.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 class OverdriveProcessorTests : public juce::UnitTest
@@ -48,4 +48,4 @@ public:
 
 static OverdriveProcessorTests overdriveProcessorTests;
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

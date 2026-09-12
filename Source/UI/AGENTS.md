@@ -1,7 +1,7 @@
 # UI
 
 ## Purpose
-Owns: the dev-facing chain-builder GUI — chain visualization/reordering (`ChainContainer`, `EffectBlockComponent`), the parameter drawer (`ParameterPanel`), per-row routing endpoint tiles (`RowEndpointBlock`), TONE3000/preset/model dialogs, the overlay/card system (`OverlayHost`), look-and-feel (`PedaleiraLookAndFeel`), and `MainComponent` — the one persistent owner of every `EffectProcessor` in the live chain.
+Owns: the dev-facing chain-builder GUI — chain visualization/reordering (`ChainContainer`, `EffectBlockComponent`), the parameter drawer (`ParameterPanel`), per-row routing endpoint tiles (`RowEndpointBlock`), TONE3000/preset/model dialogs, the overlay/card system (`OverlayHost`), look-and-feel (`OpenGuitarMultiFxLookAndFeel`), and `MainComponent` — the one persistent owner of every `EffectProcessor` in the live chain.
 Does not own: audio processing itself (`Source/Engine`, `Source/Effects`) or what a preset's XML contains beyond `MainComponent::buildPresetXml`/`applyPresetXml` (storage mechanics are `Source/Presets`).
 
 This is explicitly a **dev-facing chain builder pulled forward from Phase 7**, not the final touch UI — see root AGENTS.md roadmap. Read root AGENTS.md's "UI/UX Design Philosophy" section before touching layout/sizing here; it is binding on this directory, not background reading.
@@ -18,7 +18,7 @@ This is explicitly a **dev-facing chain builder pulled forward from Phase 7**, n
 | Signal-line + tile row layout | `ChainContainer.{h,cpp}` |
 | A row's endpoint tile (input / output / "TO Line N") | `RowEndpointBlock.{h,cpp}` |
 | Per-block parameter drawer | `ParameterPanel.{h,cpp}` — also hosts contextual TONE3000 search, scoped to the selected block |
-| App font (Sora, embedded) | `PedaleiraLookAndFeel.{h,cpp}`, `Assets/Fonts/` |
+| App font (Sora, embedded) | `OpenGuitarMultiFxLookAndFeel.{h,cpp}`, `Assets/Fonts/` |
 | Settings screen (despite the filename) | `Tone3000Panel.{h,cpp}` — general Settings, TONE3000 account is just its first section |
 | Effect icon reference (categories/colours/glyphs) | `../../docs/icons/AGENT-icon-notes.md` — read before adding any icon |
 | Bottom bar (tuner/BPM-tap/IN-OUT meters) | `FooterBar.{h,cpp}` — visual placeholder only, see its class doc comment before wiring up real DSP |

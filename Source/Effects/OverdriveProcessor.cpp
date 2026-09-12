@@ -5,7 +5,7 @@
 
 #include <cmath>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 OverdriveProcessor::OverdriveProcessor()
@@ -58,4 +58,4 @@ void OverdriveProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) 
     icon::drawSvg (g, b, svg.get());
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

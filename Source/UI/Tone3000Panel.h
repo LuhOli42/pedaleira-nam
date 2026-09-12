@@ -8,7 +8,7 @@
 #include <functional>
 #include <memory>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -57,4 +57,4 @@ private:
     juce::TextButton closeButton { "Close" };
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

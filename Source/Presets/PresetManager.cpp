@@ -1,6 +1,6 @@
 #include "PresetManager.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 PresetManager::PresetManager (juce::File directoryToUse)
@@ -58,4 +58,4 @@ int PresetManager::nextAvailableNumber() const
     return highest + 1;
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

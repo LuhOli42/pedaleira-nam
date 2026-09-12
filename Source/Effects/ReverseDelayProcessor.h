@@ -5,7 +5,7 @@
 #include <array>
 #include <vector>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -60,4 +60,4 @@ private:
     double currentSampleRate = 0.0;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

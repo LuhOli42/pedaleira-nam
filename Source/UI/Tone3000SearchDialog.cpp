@@ -3,7 +3,7 @@
 #include "TouchSizing.h"
 #include "../Tone3000/GearRouting.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 Tone3000SearchDialog::Tone3000SearchDialog (Tone3000Manager& managerToUse, juce::String gearFilterToUse,
@@ -207,4 +207,4 @@ void Tone3000SearchDialog::paint (juce::Graphics& g)
     g.fillAll (juce::Colour (0xff141414));
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

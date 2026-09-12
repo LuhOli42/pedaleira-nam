@@ -9,7 +9,7 @@
 #include <atomic>
 #include <memory>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -91,4 +91,4 @@ private:
     std::atomic<int> selectedOutputPairStart { 0 };
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

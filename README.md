@@ -1,4 +1,6 @@
-# NAM Pedalboard
+# OpenGuitarMultiFx
+
+*codename: cheapCortex*
 
 A digital guitar processor for live use — realtime audio engine in C++/JUCE, Neural Amp Modeling, and TONE3000 integration.
 

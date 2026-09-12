@@ -5,7 +5,7 @@
 
 #include <cmath>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 DelayProcessor::DelayProcessor()
@@ -105,4 +105,4 @@ void DelayProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) cons
     icon::drawSvg (g, b, svg.get());
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

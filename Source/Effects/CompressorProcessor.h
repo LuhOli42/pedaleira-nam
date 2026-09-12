@@ -3,7 +3,7 @@
 #include "EffectProcessor.h"
 #include "EnvelopeFollower.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -38,4 +38,4 @@ private:
     EnvelopeFollower detector;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

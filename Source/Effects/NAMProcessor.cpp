@@ -5,7 +5,7 @@
 
 #include <NAM/get_dsp.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 NAMProcessor::NAMProcessor (juce::String chainRoleName)
@@ -146,4 +146,4 @@ void NAMProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
     icon::drawSvg (g, b, svg.get());
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

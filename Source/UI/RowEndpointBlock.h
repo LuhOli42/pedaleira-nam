@@ -4,7 +4,7 @@
 
 #include <functional>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -35,4 +35,4 @@ private:
     juce::String label, detail;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

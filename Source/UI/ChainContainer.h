@@ -5,7 +5,7 @@
 #include <functional>
 #include <vector>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /** Draws the connector lines between chain blocks, underneath them (a plain
@@ -86,4 +86,4 @@ private:
     juce::Rectangle<float> cellBounds (int index) const;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

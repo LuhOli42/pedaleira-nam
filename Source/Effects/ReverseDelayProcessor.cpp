@@ -3,7 +3,7 @@
 
 #include <IconData.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 ReverseDelayProcessor::ReverseDelayProcessor()
@@ -118,4 +118,4 @@ void ReverseDelayProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> 
     icon::drawSvg (g, b, svg.get());
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

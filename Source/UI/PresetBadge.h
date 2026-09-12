@@ -4,7 +4,7 @@
 
 #include <functional>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -27,7 +27,7 @@ public:
     void setNumber (int number);
 
     /** The heavier display weight for the big number -- see
-        PedaleiraLookAndFeel::getExtraBoldTypeface(). Falls back to the
+        OpenGuitarMultiFxLookAndFeel::getExtraBoldTypeface(). Falls back to the
         current LookAndFeel's bold if never set. */
     void setDisplayTypeface (juce::Typeface::Ptr typeface);
 
@@ -41,4 +41,4 @@ private:
     juce::Typeface::Ptr displayTypeface;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

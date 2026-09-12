@@ -1,9 +1,9 @@
-juce_add_console_app(PedaleiraNAM_Tests
-  PRODUCT_NAME "Pedaleira NAM Tests"
-  BUNDLE_ID "com.pedaleiranam.PedaleiraNAMTests"
+juce_add_console_app(OpenGuitarMultiFx_Tests
+  PRODUCT_NAME "OpenGuitarMultiFx Tests"
+  BUNDLE_ID "com.openguitarmultifx.OpenGuitarMultiFxTests"
 )
 
-target_sources(PedaleiraNAM_Tests PRIVATE
+target_sources(OpenGuitarMultiFx_Tests PRIVATE
   RunTests.cpp
   SignalGraphTests.cpp
   DeferredReclaimerTests.cpp
@@ -36,15 +36,15 @@ target_sources(PedaleiraNAM_Tests PRIVATE
   ../Source/Effects/HoldProcessor.cpp
 )
 
-target_include_directories(PedaleiraNAM_Tests PRIVATE ../Source)
+target_include_directories(OpenGuitarMultiFx_Tests PRIVATE ../Source)
 
-target_compile_definitions(PedaleiraNAM_Tests PRIVATE
+target_compile_definitions(OpenGuitarMultiFx_Tests PRIVATE
   JUCE_WEB_BROWSER=0
   JUCE_USE_CURL=0
-  PEDALEIRA_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+  OGMFX_TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
-target_link_libraries(PedaleiraNAM_Tests PRIVATE
+target_link_libraries(OpenGuitarMultiFx_Tests PRIVATE
   juce::juce_audio_basics
   juce::juce_audio_processors
   juce::juce_core
@@ -53,7 +53,7 @@ target_link_libraries(PedaleiraNAM_Tests PRIVATE
   juce::juce_recommended_config_flags
   juce::juce_recommended_warning_flags
   nam_core
-  PedaleiraNAM_Icons
+  OpenGuitarMultiFx_Icons
 )
 
-add_test(NAME PedaleiraNAM_UnitTests COMMAND PedaleiraNAM_Tests)
+add_test(NAME OpenGuitarMultiFx_UnitTests COMMAND OpenGuitarMultiFx_Tests)

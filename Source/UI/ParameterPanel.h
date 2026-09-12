@@ -9,7 +9,7 @@
 #include <memory>
 #include <vector>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -105,4 +105,4 @@ private:
     juce::Rectangle<int> accentBandBounds;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

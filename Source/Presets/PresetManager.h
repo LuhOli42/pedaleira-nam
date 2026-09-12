@@ -4,7 +4,7 @@
 
 #include <memory>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -52,4 +52,4 @@ private:
     juce::File directory;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

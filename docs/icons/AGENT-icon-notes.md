@@ -58,10 +58,10 @@ an overcautious assumption.
    speaker-grille dot or a filled note head), save it under `Assets/Icons/`.
 2. Validate it parses (`python3 -c "import xml.etree.ElementTree as ET;
    ET.parse('Assets/Icons/yourfile.svg')"`) before wiring it in.
-3. Add the filename to `juce_add_binary_data(PedaleiraNAM_Icons ...)`'s
+3. Add the filename to `juce_add_binary_data(OpenGuitarMultiFx_Icons ...)`'s
    `SOURCES` in `CMakeLists.txt`, and to `Tests/CMakeLists.txt`'s
-   `PedaleiraNAM_Icons` link if the processor's `.cpp` is also compiled
-   into `PedaleiraNAM_Tests` (it always is, per the per-processor unit
+   `OpenGuitarMultiFx_Icons` link if the processor's `.cpp` is also compiled
+   into `OpenGuitarMultiFx_Tests` (it always is, per the per-processor unit
    test convention).
 4. In the processor's `drawIcon()`: `#include "IconKit.h"` and
    `#include <IconData.h>`, then

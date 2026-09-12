@@ -1,9 +1,9 @@
 #include "UI/MainComponent.h"
-#include "UI/PedaleiraLookAndFeel.h"
+#include "UI/OpenGuitarMultiFxLookAndFeel.h"
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 class MainWindow : public juce::DocumentWindow
@@ -32,10 +32,10 @@ public:
     }
 };
 
-class PedaleiraNAMApplication : public juce::JUCEApplication
+class OpenGuitarMultiFxApplication : public juce::JUCEApplication
 {
 public:
-    const juce::String getApplicationName() override { return "Pedaleira NAM"; }
+    const juce::String getApplicationName() override { return "OpenGuitarMultiFx"; }
     const juce::String getApplicationVersion() override { return "0.1.0"; }
 
     void initialise (const juce::String&) override
@@ -44,16 +44,16 @@ public:
         // captured through distrobox/podman -- so "why did it close" is
         // answerable after the fact instead of guessed at.
         fileLogger.reset (juce::FileLogger::createDefaultAppLogger (
-            "PedaleiraNAM", "pedaleira-nam.log", "Pedaleira NAM session started"));
+            "OpenGuitarMultiFx", "openguitarmultifx.log", "OpenGuitarMultiFx session started"));
         juce::Logger::setCurrentLogger (fileLogger.get());
 
         // Set before MainWindow is constructed -- its own constructor reads
         // the default LookAndFeel's background colour immediately.
-        lookAndFeel = std::make_unique<PedaleiraLookAndFeel>();
+        lookAndFeel = std::make_unique<OpenGuitarMultiFxLookAndFeel>();
         juce::LookAndFeel::setDefaultLookAndFeel (lookAndFeel.get());
 
         juce::Logger::writeToLog ("initialise() -- creating MainWindow");
-        mainWindow = std::make_unique<MainWindow> (getApplicationName());
+        mainWindow = std::make_unique<MainWindow> (getApplicationName() + " -- cheapCortex");
         juce::Logger::writeToLog ("initialise() -- MainWindow created and visible");
     }
 
@@ -75,10 +75,10 @@ public:
 
 private:
     std::unique_ptr<MainWindow> mainWindow;
-    std::unique_ptr<PedaleiraLookAndFeel> lookAndFeel;
+    std::unique_ptr<OpenGuitarMultiFxLookAndFeel> lookAndFeel;
     std::unique_ptr<juce::FileLogger> fileLogger;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx
 
-START_JUCE_APPLICATION (pedaleira::PedaleiraNAMApplication)
+START_JUCE_APPLICATION (openguitarmultifx::OpenGuitarMultiFxApplication)

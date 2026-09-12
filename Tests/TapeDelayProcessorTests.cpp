@@ -2,7 +2,7 @@
 
 #include <juce_core/juce_core.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 class TapeDelayProcessorTests : public juce::UnitTest
@@ -97,4 +97,4 @@ public:
 
 static TapeDelayProcessorTests tapeDelayProcessorTests;
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

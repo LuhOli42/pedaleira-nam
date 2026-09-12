@@ -1,6 +1,6 @@
 #include "PresetBadge.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 void PresetBadge::setNumber (int number)
@@ -41,4 +41,4 @@ void PresetBadge::paint (juce::Graphics& g)
     g.drawText (text, bounds, juce::Justification::centred);
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

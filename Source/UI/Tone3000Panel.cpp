@@ -2,7 +2,7 @@
 
 #include "TouchSizing.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 Tone3000Panel::Tone3000Panel (Tone3000Manager& managerToUse)
@@ -144,4 +144,4 @@ void Tone3000Panel::paint (juce::Graphics& g)
     g.fillAll (juce::Colour (0xff141414));
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

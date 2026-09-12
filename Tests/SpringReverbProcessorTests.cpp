@@ -2,7 +2,7 @@
 
 #include <juce_core/juce_core.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 class SpringReverbProcessorTests : public juce::UnitTest
@@ -92,4 +92,4 @@ public:
 
 static SpringReverbProcessorTests springReverbProcessorTests;
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

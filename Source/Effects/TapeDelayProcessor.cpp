@@ -5,7 +5,7 @@
 
 #include <cmath>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 TapeDelayProcessor::TapeDelayProcessor()
@@ -121,4 +121,4 @@ void TapeDelayProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) 
     icon::drawSvg (g, b, svg.get());
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

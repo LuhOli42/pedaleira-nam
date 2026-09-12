@@ -6,7 +6,7 @@
 
 #include <functional>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -57,4 +57,4 @@ private:
     juce::ComponentDragger dragger;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

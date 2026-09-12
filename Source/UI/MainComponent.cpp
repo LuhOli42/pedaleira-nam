@@ -1,6 +1,6 @@
 #include "MainComponent.h"
 
-#include "PedaleiraLookAndFeel.h"
+#include "OpenGuitarMultiFxLookAndFeel.h"
 #include "PresetListDialog.h"
 #include "Tone3000Panel.h"
 #include "TouchSizing.h"
@@ -9,7 +9,7 @@
 #include <map>
 #include <numeric>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 namespace
@@ -84,8 +84,8 @@ MainComponent::MainComponent()
     // readable from a few feet away is the actual requirement here (this
     // is a stage instrument), see PresetBadge.h and AGENT.md's UI/UX
     // Design Philosophy. Falls back to ordinary bold if the LookAndFeel
-    // set up in Main.cpp somehow isn't a PedaleiraLookAndFeel.
-    if (auto* laf = dynamic_cast<PedaleiraLookAndFeel*> (&juce::LookAndFeel::getDefaultLookAndFeel()))
+    // set up in Main.cpp somehow isn't a OpenGuitarMultiFxLookAndFeel.
+    if (auto* laf = dynamic_cast<OpenGuitarMultiFxLookAndFeel*> (&juce::LookAndFeel::getDefaultLookAndFeel()))
     {
         presetBadge.setDisplayTypeface (laf->getExtraBoldTypeface());
         titleLabel.setFont (juce::Font (juce::FontOptions (42.0f).withTypeface (laf->getExtraBoldTypeface())));
@@ -768,14 +768,14 @@ void MainComponent::showAddEffectMenu (int targetGridSlot)
 juce::File MainComponent::getModelsDirectory()
 {
     return juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory)
-               .getChildFile ("PedaleiraNAM")
+               .getChildFile ("OpenGuitarMultiFx")
                .getChildFile ("models");
 }
 
 juce::File MainComponent::getPresetsDirectory()
 {
     return juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory)
-               .getChildFile ("PedaleiraNAM")
+               .getChildFile ("OpenGuitarMultiFx")
                .getChildFile ("presets");
 }
 
@@ -1240,4 +1240,4 @@ void MainComponent::paint (juce::Graphics& g)
     }
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

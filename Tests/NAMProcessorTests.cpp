@@ -5,18 +5,18 @@
 #include <cmath>
 #include <filesystem>
 
-#ifndef PEDALEIRA_TEST_FIXTURES_DIR
-#error "PEDALEIRA_TEST_FIXTURES_DIR must be defined by the build (see Tests/CMakeLists.txt)"
+#ifndef OGMFX_TEST_FIXTURES_DIR
+#error "OGMFX_TEST_FIXTURES_DIR must be defined by the build (see Tests/CMakeLists.txt)"
 #endif
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 namespace
 {
     std::filesystem::path lstmFixturePath()
     {
-        return std::filesystem::path (PEDALEIRA_TEST_FIXTURES_DIR) / "fixtures" / "lstm.nam";
+        return std::filesystem::path (OGMFX_TEST_FIXTURES_DIR) / "fixtures" / "lstm.nam";
     }
 }
 
@@ -97,4 +97,4 @@ public:
 
 static NAMProcessorTests namProcessorTests;
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

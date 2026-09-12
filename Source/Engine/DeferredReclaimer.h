@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -84,4 +84,4 @@ private:
     std::vector<Retired> retired; // touched only by the control thread
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

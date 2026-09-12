@@ -4,7 +4,7 @@
 
 #include <vector>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -51,4 +51,4 @@ private:
     std::vector<Change> buffer;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

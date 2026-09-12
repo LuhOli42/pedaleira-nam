@@ -5,7 +5,7 @@
 
 #include <cmath>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 IRLoaderProcessor::IRLoaderProcessor (juce::String chainRoleName)
@@ -156,4 +156,4 @@ void IRLoaderProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) c
     }
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

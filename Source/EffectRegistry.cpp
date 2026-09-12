@@ -13,7 +13,7 @@
 #include "Effects/ReverseDelayProcessor.h"
 #include "Effects/HoldProcessor.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 void registerBuiltInEffects (EffectRegistry& registry)
@@ -96,4 +96,4 @@ juce::StringArray EffectRegistry::getRegisteredNames() const
     return names;
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

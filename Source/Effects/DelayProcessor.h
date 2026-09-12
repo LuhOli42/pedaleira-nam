@@ -2,7 +2,7 @@
 
 #include "EffectProcessor.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -43,4 +43,4 @@ private:
     juce::SmoothedValue<float> smoothedMix;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(PedaleiraNAM VERSION 0.1.0 LANGUAGES C CXX)
+project(OpenGuitarMultiFx VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -29,7 +29,7 @@ include(cmake/NAMCore.cmake)
 # (2026-09-10) -- Inter read as generic/default, Sora's geometric shapes and
 # distinctive rounded terminals read more as a purpose-built hardware/gear
 # product than a stock UI font.
-juce_add_binary_data(PedaleiraNAM_Fonts
+juce_add_binary_data(OpenGuitarMultiFx_Fonts
   SOURCES
     Assets/Fonts/Sora-Regular.ttf
     Assets/Fonts/Sora-Bold.ttf
@@ -44,7 +44,7 @@ juce_add_binary_data(PedaleiraNAM_Fonts
 # approved SVG and rendering it with juce::Drawable guarantees the on-screen
 # glyph is pixel-identical to what got approved, the same reasoning as
 # embedding Sora above instead of hoping the OS font looks similar enough.
-juce_add_binary_data(PedaleiraNAM_Icons
+juce_add_binary_data(OpenGuitarMultiFx_Icons
   NAMESPACE IconData
   HEADER_NAME IconData.h
   SOURCES
@@ -67,13 +67,13 @@ juce_add_binary_data(PedaleiraNAM_Icons
 # A real (if dev-facing, pre-touch, pre-Phase-7) GUI, not a console app --
 # see AGENT.md: the user wants to SEE the chain being built, not just trust
 # test output. Still no presets/split-merge yet, on purpose.
-juce_add_gui_app(PedaleiraNAM
-  PRODUCT_NAME "Pedaleira NAM"
-  COMPANY_NAME "Pedaleira NAM"
-  BUNDLE_ID "com.pedaleiranam.PedaleiraNAM"
+juce_add_gui_app(OpenGuitarMultiFx
+  PRODUCT_NAME "OpenGuitarMultiFx"
+  COMPANY_NAME "OpenGuitarMultiFx"
+  BUNDLE_ID "com.openguitarmultifx.OpenGuitarMultiFx"
 )
 
-target_sources(PedaleiraNAM PRIVATE
+target_sources(OpenGuitarMultiFx PRIVATE
   Source/Main.cpp
   Source/EffectRegistry.cpp
   Source/Engine/AudioEngine.cpp
@@ -99,7 +99,7 @@ target_sources(PedaleiraNAM PRIVATE
   Source/UI/OverlayHost.cpp
   Source/UI/ParameterPanel.cpp
   Source/UI/MainComponent.cpp
-  Source/UI/PedaleiraLookAndFeel.cpp
+  Source/UI/OpenGuitarMultiFxLookAndFeel.cpp
   Source/UI/PresetBadge.cpp
   Source/UI/PresetListDialog.cpp
   Source/UI/Tone3000Panel.cpp
@@ -109,13 +109,13 @@ target_sources(PedaleiraNAM PRIVATE
   Source/Tone3000/Tone3000Manager.cpp
 )
 
-target_include_directories(PedaleiraNAM PRIVATE Source)
+target_include_directories(OpenGuitarMultiFx PRIVATE Source)
 
 # JUCE_WEB_BROWSER=1: TONE3000 login renders in an embedded WebBrowserComponent
 # (WebKitGTK on Linux, already available -- webkit2gtk-4.1 was found during the
 # juceaide configure step regardless), never a separate system browser process.
 # Curl is needed for TONE3000's REST calls (Tone3000Manager).
-target_compile_definitions(PedaleiraNAM PRIVATE
+target_compile_definitions(OpenGuitarMultiFx PRIVATE
   JUCE_WEB_BROWSER=1
   JUCE_USE_CURL=1
 )
@@ -139,7 +139,7 @@ pkg_check_modules(WEBKIT2GTK REQUIRED IMPORTED_TARGET webkit2gtk-4.1)
 # parallel LTRANS jobs). On a machine this size that's the difference
 # between a slow build and a hard crash -- see scripts/build.sh for the
 # incident this comment refers to. Revisit for an actual release build.
-target_link_libraries(PedaleiraNAM PRIVATE
+target_link_libraries(OpenGuitarMultiFx PRIVATE
   juce::juce_audio_basics
   juce::juce_audio_devices
   juce::juce_audio_processors
@@ -152,8 +152,8 @@ target_link_libraries(PedaleiraNAM PRIVATE
   juce::juce_recommended_config_flags
   juce::juce_recommended_warning_flags
   nam_core
-  PedaleiraNAM_Fonts
-  PedaleiraNAM_Icons
+  OpenGuitarMultiFx_Fonts
+  OpenGuitarMultiFx_Icons
   CURL::libcurl
   PkgConfig::GTK3
   PkgConfig::WEBKIT2GTK

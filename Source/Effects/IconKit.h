@@ -2,7 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-namespace pedaleira::icon
+namespace openguitarmultifx::icon
 {
 
 /**
@@ -10,7 +10,7 @@ namespace pedaleira::icon
 
     Each drawIcon() override calls this with a `static const std::unique_ptr
     <juce::Drawable> icon = ...` built once from the matching IconData::
-    binary resource (see CMakeLists.txt's PedaleiraNAM_Icons target) --
+    binary resource (see CMakeLists.txt's OpenGuitarMultiFx_Icons target) --
     this function just parses+caches nothing itself, it only draws.
 
     Why SVG assets instead of juce::Path calls: an earlier version of every
@@ -34,4 +34,4 @@ inline std::unique_ptr<juce::Drawable> loadSvg (const void* data, int dataSize)
     return juce::Drawable::createFromImageData (data, (size_t) dataSize);
 }
 
-} // namespace pedaleira::icon
+} // namespace openguitarmultifx::icon

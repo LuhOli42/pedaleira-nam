@@ -4,7 +4,7 @@
 
 #include <juce_events/juce_events.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 OAuthLoginDialog::OAuthLoginDialog (const juce::String& authorizeUrl, const juce::String& redirectUriPrefix)
@@ -68,4 +68,4 @@ void OAuthLoginDialog::paint (juce::Graphics& g)
     g.fillAll (juce::Colour (0xff1a1a1a));
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

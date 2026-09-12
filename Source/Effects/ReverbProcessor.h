@@ -4,7 +4,7 @@
 
 #include <juce_dsp/juce_dsp.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -42,4 +42,4 @@ private:
     juce::dsp::Reverb reverb;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

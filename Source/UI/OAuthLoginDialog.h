@@ -5,7 +5,7 @@
 
 #include <functional>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -58,4 +58,4 @@ private:
     juce::String redirectPrefix;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

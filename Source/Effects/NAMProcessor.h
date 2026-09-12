@@ -8,7 +8,7 @@
 #include <filesystem>
 #include <vector>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -104,4 +104,4 @@ private:
     std::vector<float> inputScratch, outputScratch;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

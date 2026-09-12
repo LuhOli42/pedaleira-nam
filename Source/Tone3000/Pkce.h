@@ -3,7 +3,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_cryptography/juce_cryptography.h> // juce::SHA256 lives here, not in juce_core
 
-namespace pedaleira::pkce
+namespace openguitarmultifx::pkce
 {
 
 /** Standard base64 -> base64url (RFC 7636): -/_ instead of +//, no padding. */
@@ -43,4 +43,4 @@ inline juce::String codeChallengeFromVerifier (const juce::String& verifier)
     return base64Url (raw.getData(), raw.getSize());
 }
 
-} // namespace pedaleira::pkce
+} // namespace openguitarmultifx::pkce

@@ -5,7 +5,7 @@
 #include <memory>
 #include <vector>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -51,4 +51,4 @@ private:
     std::vector<std::unique_ptr<juce::Component>> layers;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

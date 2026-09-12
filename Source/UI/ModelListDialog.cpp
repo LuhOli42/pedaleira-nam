@@ -2,7 +2,7 @@
 
 #include "TouchSizing.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 ModelListDialog::ModelListDialog (juce::String titleText, juce::Array<juce::File> installedFiles,
@@ -101,4 +101,4 @@ void ModelListDialog::paint (juce::Graphics& g)
     g.fillAll (juce::Colour (0xff1a1a1a));
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

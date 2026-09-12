@@ -2,7 +2,7 @@
 
 #include "EffectProcessor.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -56,4 +56,4 @@ private:
     double currentSampleRate = 0.0;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

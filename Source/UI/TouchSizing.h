@@ -1,6 +1,6 @@
 #pragma once
 
-namespace pedaleira::touch
+namespace openguitarmultifx::touch
 {
 
 /**
@@ -15,4 +15,4 @@ namespace pedaleira::touch
 */
 constexpr int minTapTarget = 48;
 
-} // namespace pedaleira::touch
+} // namespace openguitarmultifx::touch

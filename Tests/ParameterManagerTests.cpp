@@ -4,7 +4,7 @@
 
 #include <vector>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 class ParameterManagerTests : public juce::UnitTest
@@ -53,4 +53,4 @@ public:
 
 static ParameterManagerTests parameterManagerTests;
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

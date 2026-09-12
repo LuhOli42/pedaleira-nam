@@ -2,7 +2,7 @@
 
 #include <juce_core/juce_core.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 class ReverseDelayProcessorTests : public juce::UnitTest
@@ -104,4 +104,4 @@ public:
 
 static ReverseDelayProcessorTests reverseDelayProcessorTests;
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

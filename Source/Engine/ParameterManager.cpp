@@ -1,6 +1,6 @@
 #include "ParameterManager.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 ParameterManager::ParameterManager (int capacity)
@@ -29,4 +29,4 @@ bool ParameterManager::push (uint32_t parameterId, float value)
     return true;
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

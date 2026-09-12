@@ -2,7 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -23,10 +23,10 @@ namespace pedaleira
     (Tone3000SearchDialog's A1/A2/Custom picker) and any future
     juce::ComboBox.
 */
-class PedaleiraLookAndFeel : public juce::LookAndFeel_V4
+class OpenGuitarMultiFxLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
-    PedaleiraLookAndFeel();
+    OpenGuitarMultiFxLookAndFeel();
 
     juce::Typeface::Ptr getTypefaceForFont (const juce::Font& font) override;
     juce::Font getPopupMenuFont() override;
@@ -87,4 +87,4 @@ private:
     juce::Typeface::Ptr regular, bold, extraBold;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

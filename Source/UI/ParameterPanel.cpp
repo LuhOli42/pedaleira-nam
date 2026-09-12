@@ -1,12 +1,12 @@
 #include "ParameterPanel.h"
 
 #include "ModelListDialog.h"
-#include "PedaleiraLookAndFeel.h"
+#include "OpenGuitarMultiFxLookAndFeel.h"
 #include "Tone3000SearchDialog.h"
 #include "TouchSizing.h"
 #include "../Tone3000/GearRouting.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 namespace
@@ -119,7 +119,7 @@ void ParameterPanel::rebuildForCurrentProcessor()
     titleLabel.setColour (juce::Label::textColourId, juce::Colours::white);
     bypassToggle.setColour (juce::ToggleButton::tickColourId, accent);
     for (auto* b : { &browseInstalledButton, &searchTone3000Button, &removeButton })
-        b->setColour (PedaleiraLookAndFeel::accentColourId, accent);
+        b->setColour (OpenGuitarMultiFxLookAndFeel::accentColourId, accent);
 
     if (auto* group = current->getParameters())
     {
@@ -359,4 +359,4 @@ void ParameterPanel::paint (juce::Graphics& g)
     }
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

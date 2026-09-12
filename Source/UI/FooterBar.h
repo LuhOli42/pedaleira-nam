@@ -2,7 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -57,4 +57,4 @@ private:
     void drawTunerGauge (juce::Graphics& g, juce::Rectangle<float> bounds) const;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

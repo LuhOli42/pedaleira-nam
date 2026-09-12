@@ -8,7 +8,7 @@
 #include <map>
 #include <memory>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -50,4 +50,4 @@ private:
     from SignalGraph/AudioEngine -- this is the one place that knows them all. */
 void registerBuiltInEffects (EffectRegistry& registry);
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

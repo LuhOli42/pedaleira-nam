@@ -2,7 +2,7 @@
 
 #include "EffectProcessor.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -31,4 +31,4 @@ private:
     juce::AudioParameterFloat* levelDb = nullptr;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

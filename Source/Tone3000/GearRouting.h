@@ -2,7 +2,7 @@
 
 #include <juce_core/juce_core.h>
 
-namespace pedaleira::tone3000routing
+namespace openguitarmultifx::tone3000routing
 {
 
 /**
@@ -105,4 +105,4 @@ inline juce::String gearFilterForProcessorName (const juce::String& processorNam
     return {};
 }
 
-} // namespace pedaleira::tone3000routing
+} // namespace openguitarmultifx::tone3000routing

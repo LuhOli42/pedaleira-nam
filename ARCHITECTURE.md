@@ -1,8 +1,10 @@
-# NAM Pedalboard
+# OpenGuitarMultiFx
+
+*codename: cheapCortex*
 
 A digital guitar processor for live use — realtime audio engine in C++/JUCE, Neural Amp Modeling, and TONE3000 integration. Validated first on an x86 PC, then ported to dedicated hardware.
 
-> Reference document. Web version with diagrams: `Pedaleira NAM` (artifact published 2026-09-06).
+> Reference document. Web version with diagrams: `OpenGuitarMultiFx` (artifact published 2026-09-06).
 > Rev. 0.2 — 2026-09-07
 
 **Development strategy:** all of Phases 0–5 run on a **regular x86 Linux PC**, with native JUCE over ALSA/PipeWire. The final hardware (Radxa Cubie A7S + touchscreen) only enters at Phase 6, once the Audio Engine has already been validated without depending on it.
@@ -119,7 +121,7 @@ If audio/RT bring-up on the Cubie A7S doesn't mature in time for Phase 6, the pa
 ## C. Software
 
 ```
-PedaleiraNAM/
+OpenGuitarMultiFx/
 ├── Source/
 │   ├── Engine/
 │   │   ├── AudioEngine.{h,cpp}          # block loop, device I/O, CPU budget

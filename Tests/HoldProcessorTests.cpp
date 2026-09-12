@@ -2,7 +2,7 @@
 
 #include <juce_core/juce_core.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 class HoldProcessorTests : public juce::UnitTest
@@ -106,4 +106,4 @@ public:
 
 static HoldProcessorTests holdProcessorTests;
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

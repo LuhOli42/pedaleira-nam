@@ -1,8 +1,8 @@
 #include "FooterBar.h"
 
-#include "PedaleiraLookAndFeel.h"
+#include "OpenGuitarMultiFxLookAndFeel.h"
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 FooterBar::FooterBar()
@@ -97,7 +97,7 @@ void FooterBar::drawTunerGauge (juce::Graphics& g, juce::Rectangle<float> bounds
     // Needle -- deviation -1..1 mapped across the gauge's width.
     const float needleX = centreX + tuningDeviation * bounds.getWidth() * 0.5f;
     const bool inTune = std::abs (tuningDeviation) < 0.05f;
-    g.setColour (inTune ? juce::Colours::limegreen : PedaleiraLookAndFeel::getAppAccentColour());
+    g.setColour (inTune ? juce::Colours::limegreen : OpenGuitarMultiFxLookAndFeel::getAppAccentColour());
     g.fillEllipse (needleX - 8.0f, bounds.getCentreY() - 8.0f, 16.0f, 16.0f);
 }
 
@@ -107,7 +107,7 @@ void FooterBar::drawHorizontalMeter (juce::Graphics& g, juce::Rectangle<float> b
     g.fillRoundedRectangle (bounds, 4.0f);
 
     const auto fill = bounds.withWidth (bounds.getWidth() * level);
-    g.setColour (level > 0.85f ? juce::Colours::orangered : PedaleiraLookAndFeel::getAppAccentColour());
+    g.setColour (level > 0.85f ? juce::Colours::orangered : OpenGuitarMultiFxLookAndFeel::getAppAccentColour());
     g.fillRoundedRectangle (fill, 4.0f);
 
     g.setColour (juce::Colours::white);
@@ -115,4 +115,4 @@ void FooterBar::drawHorizontalMeter (juce::Graphics& g, juce::Rectangle<float> b
     g.drawText (label, bounds.reduced (8.0f, 0.0f).toNearestInt(), juce::Justification::centredLeft);
 }
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

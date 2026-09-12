@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -68,4 +68,4 @@ private:
     float envelope = 0.0f;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

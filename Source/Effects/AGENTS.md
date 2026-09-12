@@ -59,7 +59,7 @@ Does not own: chain ordering/execution (`Source/Engine/SignalGraph`), who owns p
 ### Adding a new effect processor
 1. Subclass `EffectProcessor`, implement the full contract (`prepare`/`process`/`reset`/`getParameters`/`getName`; override `getState`/`setState` only if state is more than float params).
 2. Register it in `EffectRegistry::registerBuiltInEffects` (`Source/EffectRegistry.cpp`) — this is the one place concrete types are known.
-3. Add its glyph as an `Assets/Icons/*.svg` matching the shared reference sheet, embed it via `CMakeLists.txt`'s `PedaleiraNAM_Icons` target, draw it through `IconKit.h` in `drawIcon()`, set `getAccentColour()`, and add a row to `docs/icons/AGENT-icon-notes.md` — don't invent an ad-hoc glyph or hand-write `juce::Path` calls (see `docs/icons/AGENT-icon-notes.md`'s "To add a new icon" and root AGENTS.md's UI/UX Design Philosophy).
+3. Add its glyph as an `Assets/Icons/*.svg` matching the shared reference sheet, embed it via `CMakeLists.txt`'s `OpenGuitarMultiFx_Icons` target, draw it through `IconKit.h` in `drawIcon()`, set `getAccentColour()`, and add a row to `docs/icons/AGENT-icon-notes.md` — don't invent an ad-hoc glyph or hand-write `juce::Path` calls (see `docs/icons/AGENT-icon-notes.md`'s "To add a new icon" and root AGENTS.md's UI/UX Design Philosophy).
 4. If it needs a loaded file (model/IR), override `wantsModelFile()`→true and `loadModelFile()`, and add a route in `Source/Tone3000/GearRouting.h` if it should be reachable via TONE3000 search.
 
 ## Pitfalls

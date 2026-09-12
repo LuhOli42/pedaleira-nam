@@ -2,7 +2,7 @@
 
 #include <juce_core/juce_core.h>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 class PingPongDelayProcessorTests : public juce::UnitTest
@@ -88,4 +88,4 @@ public:
 
 static PingPongDelayProcessorTests pingPongDelayProcessorTests;
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

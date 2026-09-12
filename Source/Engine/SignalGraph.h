@@ -4,7 +4,7 @@
 
 #include <vector>
 
-namespace pedaleira
+namespace openguitarmultifx
 {
 
 /**
@@ -43,4 +43,4 @@ private:
     std::vector<EffectProcessor*> processors;
 };
 
-} // namespace pedaleira
+} // namespace openguitarmultifx

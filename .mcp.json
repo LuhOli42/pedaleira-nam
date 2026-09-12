@@ -7,7 +7,7 @@
         "code_review_graph",
         "serve"
       ],
-      "cwd": "/var/home/luhluh-machine/pedaleira-nam",
+      "cwd": "/var/home/luhluh-machine/OpenGuitarMultiFx",
       "type": "stdio"
     }
   }
