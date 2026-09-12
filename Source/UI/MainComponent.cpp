@@ -62,7 +62,7 @@ namespace
             || displayName == "Plate" || displayName == "Room" || displayName == "Shimmer" || displayName == "Gated")
             return "Reverb";
         if (displayName == "Digital Delay" || displayName == "Tape Delay" || displayName == "Analog Delay"
-            || displayName == "Dual Delay" || displayName == "Ping Pong"
+            || displayName == "Dual Delay" || displayName == "Multi Tap" || displayName == "Ping Pong"
             || displayName == "Reverse Delay" || displayName == "Hold")
             return "Delay";
         return "Other"; // shouldn't normally happen -- a new effect type that hasn't been categorised yet

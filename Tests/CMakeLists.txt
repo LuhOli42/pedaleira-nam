@@ -23,6 +23,7 @@ target_sources(OpenGuitarMultiFx_Tests PRIVATE
   GatedReverbProcessorTests.cpp
   AnalogDelayProcessorTests.cpp
   DualDelayProcessorTests.cpp
+  MultiTapDelayProcessorTests.cpp
   PingPongDelayProcessorTests.cpp
   ReverseDelayProcessorTests.cpp
   HoldProcessorTests.cpp
@@ -45,6 +46,7 @@ target_sources(OpenGuitarMultiFx_Tests PRIVATE
   ../Source/Effects/GatedReverbProcessor.cpp
   ../Source/Effects/AnalogDelayProcessor.cpp
   ../Source/Effects/DualDelayProcessor.cpp
+  ../Source/Effects/MultiTapDelayProcessor.cpp
   ../Source/Effects/PingPongDelayProcessor.cpp
   ../Source/Effects/ReverseDelayProcessor.cpp
   ../Source/Effects/HoldProcessor.cpp

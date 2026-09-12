@@ -16,6 +16,7 @@
 #include "Effects/GatedReverbProcessor.h"
 #include "Effects/AnalogDelayProcessor.h"
 #include "Effects/DualDelayProcessor.h"
+#include "Effects/MultiTapDelayProcessor.h"
 #include "Effects/PingPongDelayProcessor.h"
 #include "Effects/ReverseDelayProcessor.h"
 #include "Effects/HoldProcessor.h"
@@ -54,6 +55,7 @@ void registerBuiltInEffects (EffectRegistry& registry)
     registry.registerType ("TapeDelay", [] { return std::make_unique<TapeDelayProcessor>(); });
     registry.registerType ("AnalogDelay", [] { return std::make_unique<AnalogDelayProcessor>(); });
     registry.registerType ("DualDelay", [] { return std::make_unique<DualDelayProcessor>(); });
+    registry.registerType ("MultiTapDelay", [] { return std::make_unique<MultiTapDelayProcessor>(); });
     registry.registerType ("Ambient", [] { return std::make_unique<ReverbProcessor>(); });
     registry.registerType ("Spring", [] { return std::make_unique<SpringReverbProcessor>(); });
     registry.registerType ("Hall", [] { return std::make_unique<HallReverbProcessor>(); });
