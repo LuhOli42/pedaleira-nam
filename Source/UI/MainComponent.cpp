@@ -329,36 +329,6 @@ void MainComponent::refreshRowEndpoints()
     }
 }
 
-bool MainComponent::rowLinkWouldLoop (int row, int candidateTarget) const
-{
-    // Walk forward from the proposed target across EVERY branch (a row can
-    // feed several now): if any of them leads back to `row`, the audio
-    // would have to feed itself.
-    if (candidateTarget < 0 || candidateTarget >= numRows)
-        return false;
-
-    std::array<bool, numRows> seen {};
-    std::vector<int> stack { candidateTarget };
-
-    while (! stack.empty())
-    {
-        const int current = stack.back();
-        stack.pop_back();
-
-        if (current == row)
-            return true;
-        if (seen[(size_t) current])
-            continue;
-        seen[(size_t) current] = true;
-
-        for (int next = 0; next < numRows; ++next)
-            if (rowRouting[(size_t) current].toRows[(size_t) next])
-                stack.push_back (next);
-    }
-
-    return false;
-}
-
 std::vector<int> MainComponent::rowsFeedingInto (int row) const
 {
     // Walk BACKWARDS from `row` to whichever row has a device input. A row
@@ -450,18 +420,23 @@ void MainComponent::showRowOutputMenu (int row)
     constexpr int rowItemBase = 100;
     for (int target = 0; target < numRows; ++target)
     {
-        if (target == row)
+        // Only forward -- a lower-numbered line can feed a higher one, never
+        // the other way. This also makes a loop structurally impossible (no
+        // link can ever point back at an equal-or-lower number), so the
+        // separate cycle check this menu used to need is gone along with
+        // it. Per user request 2026-09-12: "linkar 3 -> 2 n faz sentido...
+        // qualquer opcao de numero 4>2 4>3 etc" -- not offered at all, not
+        // just greyed.
+        if (target <= row)
             continue;
 
         const bool alreadyOn = routing.toRows[(size_t) target];
         const int otherFeeder = feederRowFor (target);
 
-        // Offered unless it would loop, or another row already feeds it --
-        // summing two rows into one is a merge, which the engine can't do
-        // yet. Greyed rather than hidden so the reason is visible.
-        const bool allowed = alreadyOn
-                              || (! rowLinkWouldLoop (row, target)
-                                  && (otherFeeder < 0 || otherFeeder == row));
+        // Offered unless another row already feeds it -- summing two rows
+        // into one is a merge, which the engine can't do yet. Greyed rather
+        // than hidden so the reason is visible.
+        const bool allowed = alreadyOn || otherFeeder < 0 || otherFeeder == row;
 
         menu.addItem (rowItemBase + target, "Line " + juce::String (target + 1), allowed, alreadyOn);
     }
@@ -1023,16 +998,24 @@ void MainComponent::resized()
     // between rows instead ("n tem problema se tiver espaço entre eles"),
     // so the 4-row BLOCK as a whole still spans the full height even
     // though the individual tiles stay a sensible size.
+    // A thin desktop-style strip, not touch::minTapTarget -- that made it
+    // comically thick (user report 2026-09-12, "bizarramente grossa"). The
+    // real reason it looked unusable before wasn't its width at all:
+    // layoutChain() was erasing its own scroll range out from under it (see
+    // drawerScrollPadding's comment) -- fixed separately, so this can be a
+    // sane width. Declared here (before chainContentWidth) rather than down
+    // by its own setBounds() call so the two can't drift out of sync again
+    // the way they did when this used to be a separate literal there --
+    // that's the exact bug behind "o 8 bloco ta cortando".
+    const int scrollBarWidth = 14;
+
     // Every strip that comes out of `area` before the 8-column grid gets
     // whatever's left: the scrollbar (+ its 6px gap), then the two gutters
     // (each ioWidth + cableLane, the cable lane added to keep row-to-row
     // connectors off the endpoint tiles -- see its member comment) plus
     // their two 8px gaps. This has to stay in sync with every actual
-    // removeFrom*() below it -- missing the cableLane term (and, before
-    // that, the scrollbar entirely) made every block a few px too wide,
-    // which is why the 8th column kept getting clipped by the viewport
-    // (user report 2026-09-12, "o 8 bloco ta cortando").
-    const int chainContentWidth = area.getWidth() - (touch::minTapTarget + 6) - 2 * (ioWidth + cableLane) - 16;
+    // removeFrom*() below it.
+    const int chainContentWidth = area.getWidth() - (scrollBarWidth + 6) - 2 * (ioWidth + cableLane) - 16;
     blockWidth = juce::jmax (60, (chainContentWidth - (chainColumns - 1) * blockGap) / chainColumns);
     blockHeight = blockWidth;
 
@@ -1044,16 +1027,7 @@ void MainComponent::resized()
     chainRowTop = chainRow.getY();
 
     // Scrollbar first, off the far right of the window -- everything else
-    // (gutters, viewport) lays out inside what's left. touch::minTapTarget,
-    // not an arbitrary thin strip: a desktop scrollbar can get away with a
-    // few px because a mouse is precise, but this project's own rule is
-    // every interactive element meets the real touch target size, and this
-    // is draggable, not just tappable, so missing the earlier 10px was very
-    // easy on the touch panel this is ultimately built for -- almost
-    // certainly why an otherwise-correctly-wired scrollbar still didn't
-    // seem to do anything (user report 2026-09-12, "n ta dando pra
-    // scrollar ainda").
-    const int scrollBarWidth = touch::minTapTarget;
+    // (gutters, viewport) lays out inside what's left.
     chainScrollBar.setBounds (chainRow.removeFromRight (scrollBarWidth));
     chainRow.removeFromRight (6);
 
@@ -1102,16 +1076,15 @@ void MainComponent::resized()
 
     if (panelHeight > 0)
     {
-        parameterPanel.toFront (false); // overlays the chain -- must paint after it, see chainViewport's add order
-
-        // The drawer spans the window's FULL width, including the strip on
-        // the far right where chainScrollBar lives -- toFront() above put
-        // the drawer on top of it, which blocked both seeing it and
-        // clicking it while the drawer was open (user report 2026-09-11:
-        // "quando abrir o menu que fica por cima, não conseguimos scrolar
-        // e ver as linhas 3/4"). Bringing the scrollbar forward again keeps
-        // it usable regardless of the drawer's own z-order.
-        chainScrollBar.toFront (false);
+        // Overlays the chain -- must paint after it, see chainViewport's add
+        // order. chainScrollBar deliberately stays BEHIND this: the drawer
+        // covering its lower portion (down where "Remove" etc. sit) is
+        // correct z-order for an overlay, not a bug -- the part of the bar
+        // above the drawer is still there to drag. An earlier pass brought
+        // the scrollbar in FRONT of the drawer instead, which visibly
+        // covered the drawer's own buttons (user report 2026-09-12, "ela ta
+        // por cima do botao remove").
+        parameterPanel.toFront (false);
 
         // Auto-scroll the just-selected block into the part of the
         // viewport the drawer DOESN'T cover -- selecting a block on row 3

@@ -129,10 +129,6 @@ private:
         offered. -1 when nothing feeds it. */
     int feederRowFor (int row) const;
     void showRowOutputMenu (int row);
-    /** True if making `row` feed `candidateTarget` would eventually lead
-        back to `row` -- a loop the audio could never be evaluated in.
-        Follows every branch, since a row can now feed several. */
-    bool rowLinkWouldLoop (int row, int candidateTarget) const;
     /** "Line 2, 3" / "Out 1/2 + Line 3" -- what a row's output tile shows. */
     juce::String describeRowDestinations (int row) const;
     void refreshRowEndpoints();
