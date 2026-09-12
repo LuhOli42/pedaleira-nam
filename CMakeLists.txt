@@ -72,6 +72,11 @@ juce_add_binary_data(OpenGuitarMultiFx_Icons
     Assets/Icons/tremolo.svg
     Assets/Icons/chorus.svg
     Assets/Icons/vibrato.svg
+    Assets/Icons/flanger.svg
+    Assets/Icons/phaser.svg
+    Assets/Icons/rotary.svg
+    Assets/Icons/uni_vibe.svg
+    Assets/Icons/pitch_mod.svg
 )
 
 # A real (if dev-facing, pre-touch, pre-Phase-7) GUI, not a console app --
@@ -112,6 +117,8 @@ target_sources(OpenGuitarMultiFx PRIVATE
   Source/Effects/TremoloProcessor.cpp
   Source/Effects/ChorusProcessor.cpp
   Source/Effects/VibratoProcessor.cpp
+  Source/Effects/FlangerProcessor.cpp
+  Source/Effects/PhaserProcessor.cpp
   Source/UI/ChainContainer.cpp
   Source/UI/EffectBlockComponent.cpp
   Source/UI/FooterBar.cpp

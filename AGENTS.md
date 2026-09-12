@@ -31,7 +31,7 @@ Hardware + software guitar pedalboard for live use, not a demo. **Two-legged str
 | 0 — Architecture + JUCE/CMake skeleton | done |
 | 1 — Audio Engine + Pedals + NAM + Cab/IR + TONE3000 + Presets | done |
 | 2 — Delay + Reverb | done (all 14 non-Looper sheet variants shipped; `Looper` deferred to Phase 5's looper/tuner/MIDI work) |
-| 3 — Modulation | in progress (`TremoloProcessor`, `ChorusProcessor`, `VibratoProcessor` done; `FlangerProcessor`, `PhaserProcessor`, `RotaryProcessor`, `UniVibeProcessor`, `PitchModProcessor` remain -- icons approved, DSP not started) |
+| 3 — Modulation | in progress (`TremoloProcessor`, `ChorusProcessor`, `VibratoProcessor`, `FlangerProcessor`, `PhaserProcessor` done; `RotaryProcessor`, `UniVibeProcessor`, `PitchModProcessor` remain -- icons approved, DSP not started) |
 | 4 — Pitch | not started |
 | 5 — Looper, tuner, MIDI, advanced routing | not started |
 | 6 — Port to Radxa Cubie A7S | not started |

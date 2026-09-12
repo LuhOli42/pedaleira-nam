@@ -27,6 +27,8 @@ target_sources(OpenGuitarMultiFx_Tests PRIVATE
   TremoloProcessorTests.cpp
   ChorusProcessorTests.cpp
   VibratoProcessorTests.cpp
+  FlangerProcessorTests.cpp
+  PhaserProcessorTests.cpp
   PingPongDelayProcessorTests.cpp
   ReverseDelayProcessorTests.cpp
   HoldProcessorTests.cpp
@@ -53,6 +55,8 @@ target_sources(OpenGuitarMultiFx_Tests PRIVATE
   ../Source/Effects/TremoloProcessor.cpp
   ../Source/Effects/ChorusProcessor.cpp
   ../Source/Effects/VibratoProcessor.cpp
+  ../Source/Effects/FlangerProcessor.cpp
+  ../Source/Effects/PhaserProcessor.cpp
   ../Source/Effects/PingPongDelayProcessor.cpp
   ../Source/Effects/ReverseDelayProcessor.cpp
   ../Source/Effects/HoldProcessor.cpp

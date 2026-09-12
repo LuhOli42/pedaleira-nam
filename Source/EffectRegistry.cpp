@@ -20,6 +20,8 @@
 #include "Effects/TremoloProcessor.h"
 #include "Effects/ChorusProcessor.h"
 #include "Effects/VibratoProcessor.h"
+#include "Effects/FlangerProcessor.h"
+#include "Effects/PhaserProcessor.h"
 #include "Effects/PingPongDelayProcessor.h"
 #include "Effects/ReverseDelayProcessor.h"
 #include "Effects/HoldProcessor.h"
@@ -64,6 +66,8 @@ void registerBuiltInEffects (EffectRegistry& registry)
     registry.registerType ("Tremolo", [] { return std::make_unique<TremoloProcessor>(); });
     registry.registerType ("Chorus", [] { return std::make_unique<ChorusProcessor>(); });
     registry.registerType ("Vibrato", [] { return std::make_unique<VibratoProcessor>(); });
+    registry.registerType ("Flanger", [] { return std::make_unique<FlangerProcessor>(); });
+    registry.registerType ("Phaser", [] { return std::make_unique<PhaserProcessor>(); });
     registry.registerType ("Ambient", [] { return std::make_unique<ReverbProcessor>(); });
     registry.registerType ("Spring", [] { return std::make_unique<SpringReverbProcessor>(); });
     registry.registerType ("Hall", [] { return std::make_unique<HallReverbProcessor>(); });

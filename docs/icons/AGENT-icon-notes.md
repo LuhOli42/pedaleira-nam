@@ -135,6 +135,8 @@ palette now for effects that don't exist yet.
 | TremoloProcessor | Modulacao → Tremolo | `Assets/Icons/tremolo.svg` (wave with shrinking/growing humps) | `Source/Effects/TremoloProcessor.cpp` |
 | ChorusProcessor | Modulacao → Chorus | `Assets/Icons/chorus.svg` (two near-identical offset waves) | `Source/Effects/ChorusProcessor.cpp` |
 | VibratoProcessor | Modulacao → Vibrato | `Assets/Icons/vibrato.svg` (one wave, wobbling period) | `Source/Effects/VibratoProcessor.cpp` |
+| FlangerProcessor | Modulacao → Flanger | `Assets/Icons/flanger.svg` (same wave twice, dotted one trailing behind -- redrawn twice: first as comb teeth, then a diagonal sweep arrow, before landing on this delayed-copy pairing per direct user description) | `Source/Effects/FlangerProcessor.cpp` |
+| PhaserProcessor | Modulacao → Phaser | `Assets/Icons/phaser.svg` (solid wave + dotted vertically-inverted mirror -- redrawn from an earlier spiral/wave-through-rings design) | `Source/Effects/PhaserProcessor.cpp` |
 
 **Phase 2 note (2026-09-11):** `DelayProcessor`/`TapeDelayProcessor`/
 `ReverbProcessor`/`SpringReverbProcessor` don't cover every Delay/Reverb
