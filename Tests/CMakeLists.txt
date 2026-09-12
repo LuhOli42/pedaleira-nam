@@ -8,6 +8,7 @@ target_sources(OpenGuitarMultiFx_Tests PRIVATE
   SignalGraphTests.cpp
   DeferredReclaimerTests.cpp
   ParameterManagerTests.cpp
+  PitchDetectorTests.cpp
   GateProcessorTests.cpp
   CompressorProcessorTests.cpp
   OverdriveProcessorTests.cpp
@@ -41,6 +42,7 @@ target_sources(OpenGuitarMultiFx_Tests PRIVATE
   HoldProcessorTests.cpp
   ../Source/EffectRegistry.cpp
   ../Source/Engine/SignalGraph.cpp
+  ../Source/Engine/PitchDetector.cpp
   ../Source/Engine/ParameterManager.cpp
   ../Source/Effects/GateProcessor.cpp
   ../Source/Effects/CompressorProcessor.cpp

@@ -14,15 +14,14 @@ namespace openguitarmultifx
     directly on the bar -- both per follow-up user correction the same day
     (originally vertical bars/no gauge).
 
-    VISUAL PLACEHOLDER ONLY, by explicit user choice (asked: real DSP now
-    vs. reserve the layout -- picked the latter). Nothing here reads real
-    audio: no pitch detection, no actual level metering, no tap-tempo
-    timing logic. That's Phase 5 (`AGENTS.md` roadmap table -- "Looper,
-    tuner, MIDI, advanced routing" -- not started). When Phase 5 lands,
-    this becomes the real thing; until then every value here is a static
-    mock so the final screen layout is visible and stable now instead of
-    growing a new region later. See setMockLevels()/setMockTuning() for the
-    hooks already wired for real data later without a layout change.
+    The tuner and IN/OUT meters are fed real audio (Phase 5): setLevels()
+    from `AudioEngine::getInputLevel()`/`getOutputLevel()` (peak per
+    block), setTuning() from a YIN pitch estimate
+    (`Source/Engine/PitchDetector.h`) converted to a note name + cents
+    deviation by `MainComponent`'s timer -- see its `timerCallback()`.
+    This class itself still knows nothing about audio; it only draws
+    whatever numbers it's given, same as before. Tap-tempo/BPM is still a
+    static visual only -- no real timing logic yet.
 */
 class FooterBar : public juce::Component
 {
@@ -32,15 +31,12 @@ public:
     void resized() override;
     void paint (juce::Graphics& g) override;
 
-    /** Placeholder hook: 0-1 level for the IN/OUT meter bars. Not fed by
-        AudioEngine yet -- wire this up when real metering lands (Phase 5)
-        instead of adding a new meter component from scratch. */
-    void setMockLevels (float inLevel, float outLevel);
+    /** 0-1 peak level for the IN/OUT meter bars. */
+    void setLevels (float inLevel, float outLevel);
 
-    /** Placeholder hook: note name text + gauge needle position (-1 flat
-        .. 0 in tune .. +1 sharp). Not fed by a real pitch detector yet --
-        same idea as setMockLevels(). */
-    void setMockTuning (const juce::String& note, float deviation);
+    /** Note name text ("--" for no detected pitch) + gauge needle position
+        (-1 flat .. 0 in tune .. +1 sharp, already clamped by the caller). */
+    void setTuning (const juce::String& note, float deviation);
 
 private:
     juce::Label tunerNoteLabel { {}, "--" };
@@ -50,6 +46,7 @@ private:
 
     float inLevel = 0.0f, outLevel = 0.0f;
     float tuningDeviation = 0.0f;
+    bool hasDetectedNote = false;
 
     juce::Rectangle<float> tunerGaugeBounds, inMeterBounds, outMeterBounds;
 

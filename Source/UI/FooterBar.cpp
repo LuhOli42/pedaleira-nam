@@ -23,21 +23,22 @@ FooterBar::FooterBar()
     // Visual only -- no tap-tempo timing logic yet, see class doc comment.
     addAndMakeVisible (tapButton);
 
-    setMockLevels (0.55f, 0.4f);    // a plausible-looking resting level, not real audio
-    setMockTuning ("E", 0.08f);     // slightly sharp, just so the gauge needle isn't dead-centre in the mock
+    setLevels (0.0f, 0.0f);
+    setTuning ("--", 0.0f);
 }
 
-void FooterBar::setMockLevels (float inLevelIn, float outLevelIn)
+void FooterBar::setLevels (float inLevelIn, float outLevelIn)
 {
     inLevel = juce::jlimit (0.0f, 1.0f, inLevelIn);
     outLevel = juce::jlimit (0.0f, 1.0f, outLevelIn);
     repaint();
 }
 
-void FooterBar::setMockTuning (const juce::String& note, float deviation)
+void FooterBar::setTuning (const juce::String& note, float deviation)
 {
     tunerNoteLabel.setText (note, juce::dontSendNotification);
     tuningDeviation = juce::jlimit (-1.0f, 1.0f, deviation);
+    hasDetectedNote = note != "--";
     repaint();
 }
 
@@ -94,9 +95,12 @@ void FooterBar::drawTunerGauge (juce::Graphics& g, juce::Rectangle<float> bounds
     g.setColour (juce::Colours::white.withAlpha (0.3f));
     g.drawLine (centreX, bounds.getY() - 3.0f, centreX, bounds.getBottom() + 3.0f, 2.0f);
 
-    // Needle -- deviation -1..1 mapped across the gauge's width.
+    // Needle -- deviation -1..1 mapped across the gauge's width. Sits
+    // dead-centre with the neutral accent colour when no pitch is
+    // detected -- green here would misleadingly read as "in tune" for
+    // silence, not "nothing to tune".
     const float needleX = centreX + tuningDeviation * bounds.getWidth() * 0.5f;
-    const bool inTune = std::abs (tuningDeviation) < 0.05f;
+    const bool inTune = hasDetectedNote && std::abs (tuningDeviation) < 0.05f;
     g.setColour (inTune ? juce::Colours::limegreen : OpenGuitarMultiFxLookAndFeel::getAppAccentColour());
     g.fillEllipse (needleX - 8.0f, bounds.getCentreY() - 8.0f, 16.0f, 16.0f);
 }

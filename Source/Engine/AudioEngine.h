@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DeferredReclaimer.h"
+#include "PitchDetector.h"
 #include "SignalGraph.h"
 
 #include <juce_audio_devices/juce_audio_devices.h>
@@ -38,6 +39,16 @@ public:
 
     /** Safe to read from any thread (it's just telemetry). */
     double getCurrentCpuUsage() const noexcept { return lastCpuUsage.load (std::memory_order_relaxed); }
+
+    /** Safe to read from any thread. Peak level (0-1) of the selected input
+        channel, and of the post-graph signal actually about to reach the
+        device -- for FooterBar's IN/OUT meters. */
+    float getInputLevel() const noexcept { return lastInputLevel.load (std::memory_order_relaxed); }
+    float getOutputLevel() const noexcept { return lastOutputLevel.load (std::memory_order_relaxed); }
+
+    /** Safe to read from any thread. 0 means no clear pitch detected
+        (silence or noise) -- for FooterBar's tuner gauge. */
+    float getDetectedFrequencyHz() const noexcept { return pitchDetector.getDetectedFrequencyHz(); }
 
     juce::AudioDeviceManager& getDeviceManager() noexcept { return deviceManager; }
 
@@ -86,6 +97,9 @@ private:
     std::atomic<double> sampleRate { 0.0 };
     std::atomic<int> blockSize { 0 };
     std::atomic<double> lastCpuUsage { 0.0 };
+    std::atomic<float> lastInputLevel { 0.0f };
+    std::atomic<float> lastOutputLevel { 0.0f };
+    PitchDetector pitchDetector;
 
     std::atomic<int> selectedInputChannel { 0 };
     std::atomic<int> selectedOutputPairStart { 0 };

@@ -6,8 +6,10 @@
 #include "TouchSizing.h"
 
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <numeric>
+#include <utility>
 
 namespace openguitarmultifx
 {
@@ -72,6 +74,27 @@ namespace
         if (displayName == "Pitch Shift" || displayName == "Octaver" || displayName == "Harmonizer")
             return "Filter/FX";
         return "Other"; // shouldn't normally happen -- a new effect type that hasn't been categorised yet
+    }
+
+    const juce::StringArray noteNames { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+
+    /** Standard equal-temperament conversion, A4 = 440Hz. Returns the
+        nearest note name and how far off it is in cents (-50..+50) --
+        used to feed FooterBar's tuner gauge from PitchDetector's raw
+        frequency estimate. `hz <= 0` (PitchDetector's "no clear pitch"
+        sentinel) returns {"--", 0}. */
+    std::pair<juce::String, float> frequencyToNoteAndCents (float hz)
+    {
+        if (hz <= 0.0f)
+            return { "--", 0.0f };
+
+        const float midiNote = 69.0f + 12.0f * std::log2 (hz / 440.0f);
+        const int nearestNote = (int) std::round (midiNote);
+        const float cents = (midiNote - (float) nearestNote) * 100.0f;
+
+        const int octave = nearestNote / 12 - 1;
+        const int noteIndex = ((nearestNote % 12) + 12) % 12;
+        return { noteNames[noteIndex] + juce::String (octave), cents };
     }
 }
 
@@ -185,7 +208,12 @@ MainComponent::MainComponent()
     // 1000x660-was-too-short bug and the knob-geometry/footer follow-ups
     // for the exact numbers this size is chosen to keep working.
     setSize (1280, 850);
-    startTimer (200);
+    // 50ms (20Hz) rather than the original 200ms -- the footer's tuner
+    // needle and level meters need to read as live/responsive, not
+    // laggy; the timer's other jobs (CPU label text, graveyard sweep,
+    // parameterPanel.refresh()) are all cheap enough not to mind running
+    // 4x more often.
+    startTimer (50);
 }
 
 MainComponent::~MainComponent()
@@ -952,6 +980,10 @@ void MainComponent::timerCallback()
 {
     cpuLabel.setText ("CPU " + juce::String (audioEngine.getCurrentCpuUsage() * 100.0, 1) + "%",
                        juce::dontSendNotification);
+
+    footerBar.setLevels (audioEngine.getInputLevel(), audioEngine.getOutputLevel());
+    const auto [noteName, cents] = frequencyToNoteAndCents (audioEngine.getDetectedFrequencyHz());
+    footerBar.setTuning (noteName, cents / 50.0f); // +/-50 cents maps to the gauge's full deflection
 
     const auto now = juce::Time::getMillisecondCounter();
     graveyard.erase (std::remove_if (graveyard.begin(), graveyard.end(),

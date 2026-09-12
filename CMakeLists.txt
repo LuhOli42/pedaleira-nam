@@ -96,6 +96,7 @@ target_sources(OpenGuitarMultiFx PRIVATE
   Source/Main.cpp
   Source/EffectRegistry.cpp
   Source/Engine/AudioEngine.cpp
+  Source/Engine/PitchDetector.cpp
   Source/Engine/SignalGraph.cpp
   Source/Engine/ParameterManager.cpp
   Source/Effects/GateProcessor.cpp

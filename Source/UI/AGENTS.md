@@ -21,7 +21,7 @@ This is explicitly a **dev-facing chain builder pulled forward from Phase 7**, n
 | App font (Sora, embedded) | `OpenGuitarMultiFxLookAndFeel.{h,cpp}`, `Assets/Fonts/` |
 | Settings screen (despite the filename) | `Tone3000Panel.{h,cpp}` — general Settings, TONE3000 account is just its first section |
 | Effect icon reference (categories/colours/glyphs) | `../../docs/icons/AGENT-icon-notes.md` — read before adding any icon |
-| Bottom bar (tuner/BPM-tap/IN-OUT meters) | `FooterBar.{h,cpp}` — visual placeholder only, see its class doc comment before wiring up real DSP |
+| Bottom bar (tuner/BPM-tap/IN-OUT meters) | `FooterBar.{h,cpp}` — tuner + IN/OUT meters fed real audio since Phase 5 (`MainComponent::timerCallback()` → `setLevels()`/`setTuning()`); BPM/tap-tempo is still a visual-only placeholder |
 
 ### Key Relationships
 - `MainComponent` owns `chain` (`vector<unique_ptr<EffectProcessor>>`) and `blocks` (`OwnedArray<EffectBlockComponent>`) as two parallel arrays — any reorder must move both in lockstep (see Pitfalls).
@@ -68,6 +68,7 @@ Block removed → moved into `graveyard` (NOT destroyed) until the old SignalGra
 | `topBarHeight` 76→92, `footerHeight` 64→92, `FooterBar`'s tuner redrawn as a horizontal center-zero gauge + note letter (was a plain label), IN/OUT meters redrawn as two stacked horizontal bars labelled directly on the bar (was two small vertical bars with a caption underneath) | Follow-up user feedback the same day (2026-09-10) after seeing the first pass: header/footer both asked to be more prominent, and the meter/tuner shapes corrected to match a hand-drawn mockup | Keeping the original vertical-bar meters and plain-text tuner (superseded same day) |
 | Output routing = real hardware channel pairs, queried live | See `Source/Engine/AGENTS.md` — same decision, UI consequence is the row endpoint menus never hardcode a channel list | Abstract stereo/L/R selector |
 | Every former OS popup → `OverlayHost` card | Standalone touchscreen device has no window manager; "open another window" isn't a pedalboard mental model | `juce::DialogWindow`/`DocumentWindow` per popup |
+| `FooterBar`'s tuner/meters wired to real audio (Phase 5): `setMockLevels`/`setMockTuning` renamed to `setLevels`/`setTuning`, fed from `AudioEngine::getInputLevel()`/`getOutputLevel()`/`getDetectedFrequencyHz()` in `MainComponent::timerCallback()`, which was bumped from 200ms to 50ms for a responsive needle/meters | The Phase 5 roadmap item this whole placeholder was reserving space for — see `Source/Engine/AGENTS.md` for the `PitchDetector`/level-metering DSP itself. `FooterBar` still doesn't know anything about audio; it only draws whatever numbers it's given | A separate faster timer just for the footer (unnecessary complexity — the other timer jobs are cheap enough to just run more often too) |
 
 ## Entry Points
 | Task | Start Here |

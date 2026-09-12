@@ -142,6 +142,7 @@ void AudioEngine::audioDeviceAboutToStart (juce::AudioIODevice* device)
 {
     sampleRate.store (device->getCurrentSampleRate(), std::memory_order_relaxed);
     blockSize.store (device->getCurrentBufferSizeSamples(), std::memory_order_relaxed);
+    pitchDetector.prepare (device->getCurrentSampleRate());
 }
 
 void AudioEngine::audioDeviceStopped()
@@ -167,6 +168,18 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
                                : 0;
     const float* in = (numInputChannels > 0) ? inputChannelData[inChIndex] : nullptr;
 
+    if (in != nullptr)
+    {
+        pitchDetector.pushSamples (in, numSamples);
+        const auto range = juce::FloatVectorOperations::findMinAndMax (in, numSamples);
+        lastInputLevel.store (juce::jmax (std::abs (range.getStart()), std::abs (range.getEnd())),
+                               std::memory_order_relaxed);
+    }
+    else
+    {
+        lastInputLevel.store (0.0f, std::memory_order_relaxed);
+    }
+
     for (int ch = 0; ch < numOutputChannels; ++ch)
     {
         auto* out = outputChannelData[ch];
@@ -181,6 +194,17 @@ void AudioEngine::audioDeviceIOCallbackWithContext (const float* const* inputCha
 
     if (auto* graph = graphSlot.currentRaw())
         graph->process (buffer);
+
+    // Peak across every channel the graph actually produced -- what's
+    // about to reach the device, before the pair-silencing below decides
+    // which of those channels the listener actually hears.
+    float outPeak = 0.0f;
+    for (int ch = 0; ch < numOutputChannels; ++ch)
+    {
+        const auto range = juce::FloatVectorOperations::findMinAndMax (outputChannelData[ch], numSamples);
+        outPeak = juce::jmax (outPeak, std::abs (range.getStart()), std::abs (range.getEnd()));
+    }
+    lastOutputLevel.store (outPeak, std::memory_order_relaxed);
 
     // Silence every physical output channel outside the selected pair --
     // clamped to what this device actually has, so a stale selection from a
