@@ -105,9 +105,13 @@ MainComponent::MainComponent()
     // Wraps into rows instead of growing sideways now (see layoutChain()),
     // so it's the vertical scrollbar that's the overflow fallback.
     chainViewport.setViewedComponent (&chainContainer, false);
-    chainViewport.setScrollBarsShown (true, false);
-    chainViewport.onScrolled = [this] { repaint(); };
+    chainViewport.setScrollBarsShown (false, false); // driven by chainScrollBar instead -- see its member comment
+    chainViewport.onScrolled = [this] { syncChainScrollBar(); repaint(); };
     addAndMakeVisible (chainViewport);
+
+    chainScrollBar.setAutoHide (false);
+    chainScrollBar.addListener (this);
+    addAndMakeVisible (chainScrollBar);
     chainContainer.setMaxVisibleRows (maxVisibleRows);
 
     // The only way to add a block now -- hover the grid, a "+" appears
@@ -680,6 +684,12 @@ void MainComponent::resized()
     auto chainRow = area;
     chainRowTop = chainRow.getY();
 
+    // Scrollbar first, off the far right of the window -- everything else
+    // (gutters, viewport) lays out inside what's left.
+    constexpr int scrollBarWidth = 10;
+    chainScrollBar.setBounds (chainRow.removeFromRight (scrollBarWidth));
+    chainRow.removeFromRight (6);
+
     leftGutterColumn = chainRow.removeFromLeft (ioWidth);
     chainRow.removeFromLeft (8);
     rightGutterColumn = chainRow.removeFromRight (ioWidth);
@@ -736,6 +746,24 @@ void MainComponent::resized()
     chainViewport.setViewPosition (chainViewport.getViewPositionX(),
                                     juce::jlimit (0, juce::jmax (0, chainContainer.getHeight() - chainViewport.getHeight()),
                                                   chainViewport.getViewPositionY()));
+    syncChainScrollBar();
+}
+
+void MainComponent::syncChainScrollBar()
+{
+    const int contentHeight = chainContainer.getHeight();
+    const int visibleHeight = juce::jmax (1, chainViewport.getMaximumVisibleHeight());
+
+    chainScrollBar.setRangeLimits (0.0, (double) juce::jmax (contentHeight, visibleHeight), juce::dontSendNotification);
+    chainScrollBar.setCurrentRange ((double) chainViewport.getViewPositionY(), (double) visibleHeight,
+                                     juce::dontSendNotification); // never notify back -- this IS the response to a move
+    chainScrollBar.setVisible (contentHeight > visibleHeight);
+}
+
+void MainComponent::scrollBarMoved (juce::ScrollBar* bar, double newRangeStart)
+{
+    if (bar == &chainScrollBar)
+        chainViewport.setViewPosition (chainViewport.getViewPositionX(), (int) newRangeStart);
 }
 
 void MainComponent::paint (juce::Graphics& g)
@@ -759,15 +787,10 @@ void MainComponent::paint (juce::Graphics& g)
     // own lines throughout.
     g.setColour (juce::Colours::white.withAlpha (0.3f));
 
-    // A visible vertical scrollbar sits on top of the viewport's own right
-    // edge -- without backing off from it, the connector's rightmost reach
-    // (and ChainContainer's own seam line, which shares this same edge)
-    // would render partly underneath it. See resized()'s comment on why a
-    // scrollbar can now appear here at all (extra scroll padding while the
-    // drawer overlay is open).
-    const bool scrollbarShowing = chainViewport.getVerticalScrollBar().isVisible();
-    const float scrollbarInset = scrollbarShowing ? (float) chainViewport.getScrollBarThickness() : 0.0f;
-    const float rightEdge = (float) chainViewport.getRight() - scrollbarInset;
+    // No inset needed any more: the scrollbar lives at the window's right
+    // edge (chainScrollBar), not on top of the viewport's own, so nothing
+    // overlaps the connector's rightmost reach.
+    const float rightEdge = (float) chainViewport.getRight();
     const float leftEdge = (float) chainViewport.getX();
     constexpr float cornerRadius = 10.0f;
 
@@ -788,11 +811,24 @@ void MainComponent::paint (juce::Graphics& g)
         const float fromY = (float) chainRowTop + (float) row * (float) (blockHeight + rowGap) + (float) blockHeight * 0.5f - (float) scrollOffset;
         const float toY   = (float) chainRowTop + (float) (row + 1) * (float) (blockHeight + rowGap) + (float) blockHeight * 0.5f - (float) scrollOffset;
 
+        // Two bends, exactly mirroring the left side below: OUT of the row
+        // line at its right end, around through the gutter, and back IN to
+        // meet the seam. It used to start at (rightX, fromY) -- the gutter's
+        // centre, which is to the RIGHT of where ChainContainer's row line
+        // actually ends -- so the path began in mid-air with a visible gap
+        // between the row and the connector, and read as a stray hook
+        // rather than a continuous line. Same class of bug as the left
+        // side's missing final segment (fixed 2026-09-11); this is its
+        // mirror image at the other end, per user correction with an
+        // annotated screenshot ("em vermelho é aonde ta o traço da linha,
+        // como deveria ser em verde").
         const float rightX = (float) rightGutterColumn.getCentreX();
         juce::Path rightSide;
-        rightSide.startNewSubPath (rightX, fromY);
+        rightSide.startNewSubPath (rightEdge, fromY);
+        rightSide.lineTo (rightX - cornerRadius, fromY);
+        rightSide.quadraticTo (rightX, fromY, rightX, fromY + cornerRadius);
         rightSide.lineTo (rightX, seamY - cornerRadius);
-        rightSide.quadraticTo (rightX, seamY, rightX + cornerRadius, seamY);
+        rightSide.quadraticTo (rightX, seamY, rightX - cornerRadius, seamY);
         rightSide.lineTo (rightEdge, seamY);
         g.strokePath (rightSide, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 

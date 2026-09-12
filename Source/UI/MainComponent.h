@@ -52,7 +52,8 @@ public:
     graph still points at this processor.
 */
 class MainComponent : public juce::Component,
-                       private juce::Timer
+                       private juce::Timer,
+                       private juce::ScrollBar::Listener
 {
 public:
     MainComponent();
@@ -86,6 +87,12 @@ private:
     static juce::File getPresetsDirectory();
 
     void timerCallback() override;
+
+    void scrollBarMoved (juce::ScrollBar* bar, double newRangeStart) override;
+    /** Pushes the viewport's current scroll state into chainScrollBar (and
+        hides it when there's nothing to scroll). Called whenever either the
+        content size or the scroll position changes. */
+    void syncChainScrollBar();
 
     EffectRegistry registry;
     AudioEngine audioEngine;
@@ -138,6 +145,14 @@ private:
 
     ChainViewport chainViewport;
     ChainContainer chainContainer;
+
+    // The chain's scrollbar, pinned to the WINDOW's right edge rather than
+    // the viewport's own (which sits well inside the window, left of the
+    // IN/OUT gutter column -- a scrollbar floating in the middle of the
+    // chain area, per user correction 2026-09-11 with an annotated
+    // screenshot). The viewport's built-in bars are off; this one drives it
+    // through the ScrollBar::Listener callback instead.
+    juce::ScrollBar chainScrollBar { true };
 
     // Fixed at either end of the row (outside the scrolling viewport) --
     // device I/O routing, not part of the signal graph. See AudioEngine's
