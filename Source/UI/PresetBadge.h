@@ -14,7 +14,7 @@ namespace pedaleira
     Philosophy). Custom-painted rather than a juce::TextButton so its font
     size isn't at the mercy of LookAndFeel::getTextButtonFont()'s
     proportional-to-height cap, same idea as EffectBlockComponent/
-    IOSelectorBlock elsewhere in this UI.
+    RowEndpointBlock elsewhere in this UI.
 
     Once scenes exist (a preset's own internal variations), this becomes
     number+letter ("1A") in the same slot -- not built yet, see

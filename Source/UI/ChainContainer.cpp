@@ -11,6 +11,12 @@ void ChainContainer::setBlockBounds (std::vector<juce::Rectangle<float>> bounds)
     repaint();
 }
 
+void ChainContainer::setCrossings (std::vector<int> crossingYs)
+{
+    crossings = std::move (crossingYs);
+    repaint();
+}
+
 void ChainContainer::setRowMetrics (int columnsIn, int blockWidthIn, int blockHeightIn, int colGapIn, int rowGapIn)
 {
     columns = juce::jmax (1, columnsIn);
@@ -77,20 +83,19 @@ void ChainContainer::paint (juce::Graphics& g)
         const float y = row * (float) (gridBlockHeight + gridRowGap) + (float) gridBlockHeight * 0.5f;
         g.drawLine (0.0f, y, (float) getWidth(), y, 2.0f);
 
-        // The seam between this row and the next -- spans this container's
-        // FULL width (edge to edge) so it lines up exactly with the two
-        // short stubs MainComponent::paint() draws in the IN/OUT gutters
-        // just outside this container on either side. Together, the three
-        // segments (gutter stub -- this seam -- gutter stub) read as ONE
-        // continuous line from the end of a row to the start of the next,
-        // not two disconnected glyphs -- per user correction 2026-09-10
-        // ("as linhas se conectarem do final com o início da próxima").
-        if (row < usedRows - 1)
-        {
-            const float seamY = row * (float) (gridBlockHeight + gridRowGap) + (float) gridBlockHeight + (float) gridRowGap * 0.5f;
-            g.drawLine (0.0f, seamY, (float) getWidth(), seamY, 2.0f);
-        }
     }
+
+    // Row-to-row connector crossings. Spans this container's FULL width
+    // (edge to edge) so it lines up exactly with the two stubs
+    // MainComponent::paint() draws in the gutters just outside this
+    // container on either side -- the three segments together read as ONE
+    // continuous line from the end of one row to the start of another, per
+    // user correction 2026-09-10 ("as linhas se conectarem do final com o
+    // início da próxima"). Which rows are linked (if any) is the per-row
+    // routing's business, not something derivable here -- rows are
+    // independent until explicitly connected.
+    for (const int y : crossings)
+        g.drawLine (0.0f, (float) y, (float) getWidth(), (float) y, 2.0f);
 
     // Rows past the real content: a plain grid guide line, same as above
     // but with no connecting seam (nothing actually flows into unused

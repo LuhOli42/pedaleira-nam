@@ -3,7 +3,7 @@
 #include "ChainContainer.h"
 #include "EffectBlockComponent.h"
 #include "FooterBar.h"
-#include "IOSelectorBlock.h"
+#include "RowEndpointBlock.h"
 #include "OverlayHost.h"
 #include "ParameterPanel.h"
 #include "PresetBadge.h"
@@ -14,6 +14,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <array>
 #include <memory>
 #include <vector>
 
@@ -56,6 +57,11 @@ class MainComponent : public juce::Component,
                        private juce::ScrollBar::Listener
 {
 public:
+    /** Four rows, fixed -- the Quad Cortex Grid reference this follows is a
+        fixed grid, and every row now has its own routing endpoints, so this
+        is a real capacity rather than just "how many we draw". */
+    static constexpr int numRows = 4;
+
     MainComponent();
     ~MainComponent() override;
 
@@ -87,6 +93,31 @@ private:
     static juce::File getPresetsDirectory();
 
     void timerCallback() override;
+
+    /** Where one row gets its audio from and where it sends it. Rows are
+        INDEPENDENT by default -- nothing is connected until you pick it on
+        the row's own endpoint tiles, per user decision 2026-09-11 ("some --
+        só conecta o que eu escolher"). The old behaviour, where row N
+        always implicitly flowed into row N+1, is gone. */
+    struct RowRouting
+    {
+        enum class Dest { none, device, row };
+
+        int inputChannel = -1;   // device input channel feeding this row; -1 = unfed
+        Dest dest = Dest::none;
+        int destOutputPair = 0;  // device output pair, when dest == device
+        int destRow = -1;        // another row, when dest == row
+    };
+
+    void showRowInputMenu (int row);
+    void showRowOutputMenu (int row);
+    /** True if making `row` feed `candidateTarget` would eventually lead
+        back to `row` -- a loop the audio could never be evaluated in. */
+    bool rowLinkWouldLoop (int row, int candidateTarget) const;
+    void refreshRowEndpoints();
+    /** Rows whose audio reaches this one, in feed order, starting from a
+        row with a device input. Empty if `row` is never fed. */
+    std::vector<int> rowsFeedingInto (int row) const;
 
     void scrollBarMoved (juce::ScrollBar* bar, double newRangeStart) override;
     /** Pushes the viewport's current scroll state into chainScrollBar (and
@@ -154,14 +185,16 @@ private:
     // through the ScrollBar::Listener callback instead.
     juce::ScrollBar chainScrollBar { true };
 
-    // Fixed at either end of the row (outside the scrolling viewport) --
-    // device I/O routing, not part of the signal graph. See AudioEngine's
-    // setInputChannel/setOutputRouting. Positioned dynamically in
-    // resized() -- IN always sits at row 0, OUT at whichever row is
-    // currently the last occupied one (see chainUsedRows) -- rather than
-    // fixed to a single centred slot spanning every possible row.
-    IOSelectorBlock inputSelector { "IN" };
-    IOSelectorBlock outputSelector { "OUT" };
+    // One pair of endpoint tiles PER ROW, in the gutters either side of the
+    // scrolling viewport: the left one picks which device input feeds that
+    // row, the right one picks where the row goes -- a device output pair,
+    // or another row (which is what draws the connector between them).
+    // Replaced the single IN/OUT pair that used to sit on row 0 and the
+    // last occupied row, per user request 2026-09-11 (an annotated
+    // screenshot putting a "+" at both ends of every row).
+    std::array<RowRouting, numRows> rowRouting;
+    std::array<RowEndpointBlock, numRows> rowInputBlocks;
+    std::array<RowEndpointBlock, numRows> rowOutputBlocks;
 
     // Tuner/BPM-tap-tempo/IN-OUT-meters bar, always pinned at the bottom --
     // see FooterBar.h. Visual placeholder only until Phase 5.

@@ -31,13 +31,6 @@ namespace
     // em vermelho maior e a parte em roxo tbm" -- top bar and footer).
     constexpr int footerHeight = 92;
 
-    // The chain wraps into rows instead of scrolling sideways once it fills
-    // the available width -- up to this many visible at once, matching the
-    // Quad Cortex Grid reference's fixed 4-row layout (see AGENT.md's UI/UX
-    // Design Philosophy). More than that scrolls vertically as a fallback,
-    // not a wall.
-    constexpr int maxVisibleRows = 4;
-
     // Same categories as the icon reference sheet (see
     // docs/icons/AGENT-icon-notes.md, whose category names come from the
     // original PT-language reference sheet) -- the "Add effect" menu
@@ -112,7 +105,7 @@ MainComponent::MainComponent()
     chainScrollBar.setAutoHide (false);
     chainScrollBar.addListener (this);
     addAndMakeVisible (chainScrollBar);
-    chainContainer.setMaxVisibleRows (maxVisibleRows);
+    chainContainer.setMaxVisibleRows (numRows);
 
     // The only way to add a block now -- hover the grid, a "+" appears
     // exactly under the cursor, click it. No permanent dashed-box tile
@@ -131,26 +124,30 @@ MainComponent::MainComponent()
     if (! audioEngine.start())
         titleLabel.setText ("Audio device failed to open", juce::dontSendNotification);
 
-    addAndMakeVisible (inputSelector);
-    auto inputNames = audioEngine.getAvailableInputChannelNames();
-    if (inputNames.isEmpty())
-        inputNames.add ("Default");
-    inputSelector.setOptions (inputNames, audioEngine.getInputChannel());
-    inputSelector.onSelectionChanged = [this] (int index) { audioEngine.setInputChannel (index); };
+    // Row 0 starts wired device-in -> device-out so the app still makes
+    // sound out of the box; rows 1-3 start unrouted, showing a "+" at both
+    // ends. Rows are independent until you say otherwise (user decision
+    // 2026-09-11).
+    rowRouting[0].inputChannel = audioEngine.getInputChannel();
+    rowRouting[0].dest = RowRouting::Dest::device;
+    rowRouting[0].destOutputPair = audioEngine.getOutputChannelPair();
 
-    addAndMakeVisible (outputSelector);
-    auto outputNames = audioEngine.getAvailableOutputPairNames();
-    if (outputNames.isEmpty())
-        outputNames.add ("Default");
-    outputSelector.setOptions (outputNames, audioEngine.getOutputChannelPair() / 2);
-    outputSelector.onSelectionChanged = [this] (int index) { audioEngine.setOutputChannelPair (index * 2); };
+    for (int row = 0; row < numRows; ++row)
+    {
+        addAndMakeVisible (rowInputBlocks[(size_t) row]);
+        rowInputBlocks[(size_t) row].onClicked = [this, row] { showRowInputMenu (row); };
+
+        addAndMakeVisible (rowOutputBlocks[(size_t) row]);
+        rowOutputBlocks[(size_t) row].onClicked = [this, row] { showRowOutputMenu (row); };
+    }
+    refreshRowEndpoints();
 
     layoutChain();
     // ~1280x850: close to a realistic 10" touch panel candidate resolution
     // (see ARCHITECTURE.md's display section -- exact panel TBD, this is
     // our best stand-in), bumped from a plain 800 to fit the footer bar
     // added 2026-09-10 without re-opening the original clipping bug: the
-    // chain area reserves a fixed height for maxVisibleRows regardless of
+    // chain area reserves a fixed height for numRows regardless of
     // how many blocks exist, so anything else added below it (the footer)
     // has to come out of the SAME fixed budget the parameter drawer draws
     // from -- see AGENTS.md's decision entries on both the original
@@ -250,12 +247,225 @@ void MainComponent::selectBlock (EffectProcessor* processor)
     resized(); // the detail drawer only exists (and only takes up space) once something is selected
 }
 
+void MainComponent::refreshRowEndpoints()
+{
+    const auto inputNames = audioEngine.getAvailableInputChannelNames();
+    const auto outputNames = audioEngine.getAvailableOutputPairNames();
+
+    for (int row = 0; row < numRows; ++row)
+    {
+        const auto& routing = rowRouting[(size_t) row];
+
+        // Left: the device channel feeding this row, or nothing yet.
+        if (routing.inputChannel < 0)
+            rowInputBlocks[(size_t) row].setDisplay ({}, {});
+        else
+            rowInputBlocks[(size_t) row].setDisplay ("IN",
+                routing.inputChannel < inputNames.size() ? inputNames[routing.inputChannel] : juce::String ("Default"));
+
+        // Right: a device output pair, another row, or nothing yet.
+        switch (routing.dest)
+        {
+            case RowRouting::Dest::device:
+            {
+                const int pairIndex = routing.destOutputPair / 2;
+                rowOutputBlocks[(size_t) row].setDisplay ("OUT",
+                    pairIndex < outputNames.size() ? outputNames[pairIndex] : juce::String ("Default"));
+                break;
+            }
+            case RowRouting::Dest::row:
+                rowOutputBlocks[(size_t) row].setDisplay ("TO", "Line " + juce::String (routing.destRow + 1));
+                break;
+            case RowRouting::Dest::none:
+            default:
+                rowOutputBlocks[(size_t) row].setDisplay ({}, {});
+                break;
+        }
+    }
+}
+
+bool MainComponent::rowLinkWouldLoop (int row, int candidateTarget) const
+{
+    // Walk forward from the proposed target: if the chain of row->row links
+    // leads back to `row`, the audio would have to feed itself.
+    int current = candidateTarget;
+    for (int guard = 0; guard < numRows + 1; ++guard)
+    {
+        if (current < 0 || current >= numRows)
+            return false;
+        if (current == row)
+            return true;
+
+        const auto& routing = rowRouting[(size_t) current];
+        if (routing.dest != RowRouting::Dest::row)
+            return false;
+        current = routing.destRow;
+    }
+    return true; // ran out of guard -- treat as a loop rather than risk one
+}
+
+std::vector<int> MainComponent::rowsFeedingInto (int row) const
+{
+    // Walk BACKWARDS from `row` to whichever row has a device input, then
+    // return that path front-to-back. Each row has at most one feeder (a
+    // row's dest is a single choice), so this is a simple walk, not a search.
+    std::vector<int> path;
+    int current = row;
+
+    for (int guard = 0; guard < numRows + 1; ++guard)
+    {
+        path.insert (path.begin(), current);
+
+        if (rowRouting[(size_t) current].inputChannel >= 0)
+            return path; // reached a row that's actually fed by the device
+
+        int feeder = -1;
+        for (int candidate = 0; candidate < numRows; ++candidate)
+        {
+            const auto& routing = rowRouting[(size_t) candidate];
+            if (routing.dest == RowRouting::Dest::row && routing.destRow == current)
+            {
+                feeder = candidate;
+                break;
+            }
+        }
+
+        if (feeder < 0)
+            return {}; // nothing feeds this row -- it's silent
+        current = feeder;
+    }
+
+    return {};
+}
+
+void MainComponent::showRowInputMenu (int row)
+{
+    // Physical inputs only. Receiving FROM another row is expressed on that
+    // other row's output tile instead, so one link is never two contradictory
+    // settings (user decision 2026-09-11).
+    auto inputNames = audioEngine.getAvailableInputChannelNames();
+    if (inputNames.isEmpty())
+        inputNames.add ("Default");
+
+    juce::PopupMenu menu;
+    menu.addItem (1, "Not connected", true, rowRouting[(size_t) row].inputChannel < 0);
+    menu.addSeparator();
+    for (int i = 0; i < inputNames.size(); ++i)
+        menu.addItem (i + 2, inputNames[i], true, rowRouting[(size_t) row].inputChannel == i);
+
+    menu.showMenuAsync (juce::PopupMenu::Options().withStandardItemHeight (touch::minTapTarget),
+        [this, row] (int result)
+        {
+            if (result <= 0)
+                return;
+
+            rowRouting[(size_t) row].inputChannel = result == 1 ? -1 : result - 2;
+
+            // Row 0's input is also the device's -- the engine only opens one
+            // input channel today, so a second fed row shares it. Selecting
+            // per-row physical inputs properly is an engine change (multiple
+            // input channels), not a UI one; see AGENTS.md.
+            if (rowRouting[(size_t) row].inputChannel >= 0)
+                audioEngine.setInputChannel (rowRouting[(size_t) row].inputChannel);
+
+            refreshRowEndpoints();
+            rebuildSignalGraph();
+            layoutChain();
+        });
+}
+
+void MainComponent::showRowOutputMenu (int row)
+{
+    auto outputNames = audioEngine.getAvailableOutputPairNames();
+    if (outputNames.isEmpty())
+        outputNames.add ("Default");
+
+    const auto& routing = rowRouting[(size_t) row];
+
+    juce::PopupMenu menu;
+    menu.addItem (1, "Not connected", true, routing.dest == RowRouting::Dest::none);
+    menu.addSeparator();
+
+    for (int i = 0; i < outputNames.size(); ++i)
+        menu.addItem (i + 2, "Output " + outputNames[i], true,
+                       routing.dest == RowRouting::Dest::device && routing.destOutputPair / 2 == i);
+
+    // ...and the other rows. A row that would loop back into this one is
+    // shown greyed rather than hidden, so it's clear WHY it isn't offered.
+    menu.addSeparator();
+    constexpr int rowItemBase = 100;
+    for (int target = 0; target < numRows; ++target)
+    {
+        if (target == row)
+            continue;
+
+        const bool allowed = ! rowLinkWouldLoop (row, target);
+        menu.addItem (rowItemBase + target, "Line " + juce::String (target + 1), allowed,
+                       routing.dest == RowRouting::Dest::row && routing.destRow == target);
+    }
+
+    menu.showMenuAsync (juce::PopupMenu::Options().withStandardItemHeight (touch::minTapTarget),
+        [this, row, outputCount = outputNames.size()] (int result)
+        {
+            if (result <= 0)
+                return;
+
+            auto& r = rowRouting[(size_t) row];
+
+            if (result == 1)
+            {
+                r.dest = RowRouting::Dest::none;
+            }
+            else if (result >= rowItemBase)
+            {
+                r.dest = RowRouting::Dest::row;
+                r.destRow = result - rowItemBase;
+            }
+            else if (result - 2 < outputCount)
+            {
+                r.dest = RowRouting::Dest::device;
+                r.destOutputPair = (result - 2) * 2;
+                audioEngine.setOutputChannelPair (r.destOutputPair);
+            }
+
+            refreshRowEndpoints();
+            rebuildSignalGraph();
+            layoutChain();
+        });
+}
+
 void MainComponent::rebuildSignalGraph()
 {
-    auto graph = std::make_unique<SignalGraph>();
-    for (auto& p : chain)
-        graph->addProcessor (p.get());
-    audioEngine.setSignalGraph (std::move (graph));
+    // Processing order follows the ROW LINKS, not the flat block array: the
+    // blocks of a row run left to right, then whatever row that row feeds,
+    // and so on. A row nothing feeds contributes nothing at all -- which is
+    // exactly what its dimmed, unrouted endpoints already say on screen.
+    auto signalGraph = std::make_unique<SignalGraph>();
+
+    // Start from the row that reaches the device output and walk back to
+    // whichever row the device input feeds. Only one row can be the terminus
+    // today (the engine has a single output pair); a second one routed to
+    // the device is simply not reached.
+    std::vector<int> orderedRows;
+    for (int row = 0; row < numRows; ++row)
+    {
+        if (rowRouting[(size_t) row].dest == RowRouting::Dest::device)
+        {
+            orderedRows = rowsFeedingInto (row);
+            break;
+        }
+    }
+
+    for (const int row : orderedRows)
+    {
+        // `blocks` is sorted by gridSlot and gridSlot == row * chainColumns +
+        // col, so a row's blocks are already contiguous and in column order.
+        for (auto* block : blocks)
+            if (block->gridSlot / chainColumns == row)
+                signalGraph->addProcessor (&block->processor);
+    }
+
+    audioEngine.setSignalGraph (std::move (signalGraph));
 }
 
 void MainComponent::layoutChain()
@@ -289,12 +499,12 @@ void MainComponent::layoutChain()
     }
 
     const int totalRows = juce::jmax (1, maxSlot / chainColumns + 1);
-    // At least maxVisibleRows tall even when real content doesn't fill that
+    // At least numRows tall even when real content doesn't fill that
     // many rows yet -- otherwise the grid's dim placeholder rows
     // (ChainContainer::paint()) would be clipped off (JUCE clips paint()
     // to the component's own bounds). Still grows past that if there's
     // genuinely more content (the scrollbar fallback).
-    const int drawnRows = juce::jmax (totalRows, maxVisibleRows);
+    const int drawnRows = juce::jmax (totalRows, numRows);
     chainContainer.setSize (viewportWidth, drawnRows * (blockHeight + rowGap) - rowGap);
     chainContainer.setRowMetrics (chainColumns, blockWidth, blockHeight, blockGap, rowGap);
     chainContainer.setBlockBounds (std::move (bounds));
@@ -310,7 +520,7 @@ void MainComponent::layoutChain()
     // called from addEffect()/removeEffect()/handleBlockDragEnded() too --
     // none of which trigger a full resized() pass. Per user request
     // 2026-09-10 (Quad Cortex-style multi-row IN/OUT routing).
-    chainUsedRows = juce::jlimit (1, maxVisibleRows, totalRows);
+    chainUsedRows = juce::jlimit (1, numRows, totalRows);
     chainContainer.setUsedRows (chainUsedRows);
 
     auto gutterRowSlot = [&] (juce::Rectangle<int> gutterColumn, int row)
@@ -319,8 +529,31 @@ void MainComponent::layoutChain()
                                       gutterColumn.getWidth(), blockHeight);
     };
 
-    inputSelector.setBounds (gutterRowSlot (leftGutterColumn, 0).withSizeKeepingCentre (ioWidth, ioHeight));
-    outputSelector.setBounds (gutterRowSlot (rightGutterColumn, chainUsedRows - 1).withSizeKeepingCentre (ioWidth, ioHeight));
+    // Every row gets its own pair, not just row 0 and the last occupied one
+    // -- each row is independently routable now, so each needs somewhere to
+    // say so (per user request 2026-09-11, "+ no início e final de cada
+    // linha").
+    for (int row = 0; row < numRows; ++row)
+    {
+        rowInputBlocks[(size_t) row].setBounds (gutterRowSlot (leftGutterColumn, row).withSizeKeepingCentre (ioWidth, ioHeight));
+        rowOutputBlocks[(size_t) row].setBounds (gutterRowSlot (rightGutterColumn, row).withSizeKeepingCentre (ioWidth, ioHeight));
+    }
+
+    // Where a row-to-row link crosses the grid: midway between the two rows'
+    // own lines, in ChainContainer's coordinates (it draws the crossing; the
+    // gutters either side are outside its bounds -- see paint()).
+    std::vector<int> crossings;
+    for (int row = 0; row < numRows; ++row)
+    {
+        const auto& routing = rowRouting[(size_t) row];
+        if (routing.dest != RowRouting::Dest::row || routing.destRow < 0)
+            continue;
+
+        const int fromY = row * (blockHeight + rowGap) + blockHeight / 2;
+        const int toY = routing.destRow * (blockHeight + rowGap) + blockHeight / 2;
+        crossings.push_back ((fromY + toY) / 2);
+    }
+    chainContainer.setCrossings (std::move (crossings));
 
     repaint(); // the inter-row connector glyphs paint() draws depend on chainUsedRows
 }
@@ -339,7 +572,7 @@ void MainComponent::handleBlockDragEnded (EffectBlockComponent& blockComp)
     // content -- you can drag a block onto any empty cell, same as adding
     // one there (see EffectBlockComponent::gridSlot's comment).
     const auto centre = blockComp.getBounds().getCentre();
-    const int row = juce::jlimit (0, maxVisibleRows - 1, centre.y / (blockHeight + rowGap));
+    const int row = juce::jlimit (0, numRows - 1, centre.y / (blockHeight + rowGap));
     const int col = juce::jlimit (0, chainColumns - 1, centre.x / (blockWidth + blockGap));
     const int targetSlot = row * chainColumns + col;
 
@@ -607,8 +840,9 @@ void MainComponent::applyPresetXml (const juce::XmlElement& xml)
         const int outPair = ioXml->getIntAttribute ("outputPairStart", 0);
         audioEngine.setInputChannel (inCh);
         audioEngine.setOutputChannelPair (outPair);
-        inputSelector.setOptions (audioEngine.getAvailableInputChannelNames(), inCh);
-        outputSelector.setOptions (audioEngine.getAvailableOutputPairNames(), outPair / 2);
+        rowRouting[0].inputChannel = inCh;
+        rowRouting[0].dest = RowRouting::Dest::device;
+        rowRouting[0].destOutputPair = outPair;
     }
 
     rebuildSignalGraph();
@@ -677,9 +911,9 @@ void MainComponent::resized()
     blockWidth = juce::jmax (60, (chainContentWidth - (chainColumns - 1) * blockGap) / chainColumns);
     blockHeight = blockWidth;
 
-    const int rowsContentHeight = maxVisibleRows * blockHeight;
+    const int rowsContentHeight = numRows * blockHeight;
     const int leftoverHeight = area.getHeight() - 12 - rowsContentHeight; // the -12 mirrors the old fudge-padding
-    rowGap = leftoverHeight > (maxVisibleRows - 1) * blockGap ? leftoverHeight / (maxVisibleRows - 1) : blockGap;
+    rowGap = leftoverHeight > (numRows - 1) * blockGap ? leftoverHeight / (numRows - 1) : blockGap;
 
     auto chainRow = area;
     chainRowTop = chainRow.getY();
@@ -804,49 +1038,47 @@ void MainComponent::paint (juce::Graphics& g)
     // supposed to touch whenever the chain had scrolled at all).
     const int scrollOffset = chainViewport.getViewPositionY();
 
-    for (int row = 0; row < chainUsedRows - 1; ++row)
+    // One connector per row that feeds another row -- NOT one per pair of
+    // consecutive rows. Rows are independent until explicitly linked (user
+    // decision 2026-09-11: "some -- só conecta o que eu escolher"), so a
+    // link can also skip rows or run upwards, and two adjacent rows with no
+    // link between them correctly show nothing.
+    for (int row = 0; row < numRows; ++row)
     {
-        const float seamY = (float) chainRowTop + (float) row * (float) (blockHeight + rowGap)
-                             + (float) blockHeight + (float) rowGap * 0.5f - (float) scrollOffset;
-        const float fromY = (float) chainRowTop + (float) row * (float) (blockHeight + rowGap) + (float) blockHeight * 0.5f - (float) scrollOffset;
-        const float toY   = (float) chainRowTop + (float) (row + 1) * (float) (blockHeight + rowGap) + (float) blockHeight * 0.5f - (float) scrollOffset;
+        const auto& routing = rowRouting[(size_t) row];
+        if (routing.dest != RowRouting::Dest::row || routing.destRow < 0 || routing.destRow >= numRows)
+            continue;
 
-        // Two bends, exactly mirroring the left side below: OUT of the row
-        // line at its right end, around through the gutter, and back IN to
-        // meet the seam. It used to start at (rightX, fromY) -- the gutter's
-        // centre, which is to the RIGHT of where ChainContainer's row line
-        // actually ends -- so the path began in mid-air with a visible gap
-        // between the row and the connector, and read as a stray hook
-        // rather than a continuous line. Same class of bug as the left
-        // side's missing final segment (fixed 2026-09-11); this is its
-        // mirror image at the other end, per user correction with an
-        // annotated screenshot ("em vermelho é aonde ta o traço da linha,
-        // como deveria ser em verde").
+        const auto rowCentreY = [this, scrollOffset] (int r)
+        {
+            return (float) chainRowTop + (float) r * (float) (blockHeight + rowGap)
+                    + (float) blockHeight * 0.5f - (float) scrollOffset;
+        };
+
+        const float fromY = rowCentreY (row);
+        const float toY = rowCentreY (routing.destRow);
+        const float crossY = (fromY + toY) * 0.5f; // matches layoutChain()'s crossing Y
+        const float bendDir = toY > fromY ? 1.0f : -1.0f; // links can run upwards too
+
+        // Out of the source row's right end, around through the right
+        // gutter, across (ChainContainer draws that middle span), then down
+        // the left gutter and into the target row's left end.
         const float rightX = (float) rightGutterColumn.getCentreX();
         juce::Path rightSide;
         rightSide.startNewSubPath (rightEdge, fromY);
         rightSide.lineTo (rightX - cornerRadius, fromY);
-        rightSide.quadraticTo (rightX, fromY, rightX, fromY + cornerRadius);
-        rightSide.lineTo (rightX, seamY - cornerRadius);
-        rightSide.quadraticTo (rightX, seamY, rightX - cornerRadius, seamY);
-        rightSide.lineTo (rightEdge, seamY);
+        rightSide.quadraticTo (rightX, fromY, rightX, fromY + cornerRadius * bendDir);
+        rightSide.lineTo (rightX, crossY - cornerRadius * bendDir);
+        rightSide.quadraticTo (rightX, crossY, rightX - cornerRadius, crossY);
+        rightSide.lineTo (rightEdge, crossY);
         g.strokePath (rightSide, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
-        // Two bends, not one: down into the gutter at the seam (matching
-        // the visual weight of the IN/OUT tile column, per the original
-        // sketch), THEN back out of the gutter at row+1's own centreline
-        // to meet ChainContainer's row line there. The second bend was
-        // missing entirely before -- the path just stopped at (leftX, toY)
-        // with nothing connecting it back to the container's own line,
-        // which was the actual cause of the visible gap fixed 2026-09-11
-        // (the scroll-offset fix above was real but not sufficient on its
-        // own -- this was the other half of it).
         const float leftX = (float) leftGutterColumn.getCentreX();
         juce::Path leftSide;
-        leftSide.startNewSubPath (leftEdge, seamY);
-        leftSide.lineTo (leftX + cornerRadius, seamY);
-        leftSide.quadraticTo (leftX, seamY, leftX, seamY + cornerRadius);
-        leftSide.lineTo (leftX, toY - cornerRadius);
+        leftSide.startNewSubPath (leftEdge, crossY);
+        leftSide.lineTo (leftX + cornerRadius, crossY);
+        leftSide.quadraticTo (leftX, crossY, leftX, crossY + cornerRadius * bendDir);
+        leftSide.lineTo (leftX, toY - cornerRadius * bendDir);
         leftSide.quadraticTo (leftX, toY, leftX + cornerRadius, toY);
         leftSide.lineTo (leftEdge, toY);
         g.strokePath (leftSide, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));

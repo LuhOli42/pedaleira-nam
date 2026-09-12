@@ -46,6 +46,14 @@ public:
         past whatever's actually in use) -- see the class doc comment. */
     void setMaxVisibleRows (int rows) { maxVisibleRows = juce::jmax (1, rows); }
 
+    /** The Y positions (this container's own coordinates) where a row-to-row
+        connector crosses the grid horizontally. MainComponent computes these
+        from the per-row routing and draws the two gutter stubs either side;
+        this container draws the crossing itself because the gutters are
+        OUTSIDE the scrolling viewport while this part has to be inside it.
+        Empty when no row feeds another. */
+    void setCrossings (std::vector<int> crossingYs);
+
     /** How many rows currently have at least one real block in them --
         MainComponent computes this from every block's gridSlot (which can
         now be sparse, so "how many rows are used" is no longer simply
@@ -69,6 +77,7 @@ private:
     int gridBlockWidth = 1, gridBlockHeight = 1, gridColGap = 0, gridRowGap = 0;
     int maxVisibleRows = 4;
     int usedRows = 1;
+    std::vector<int> crossings;
     int hoveredIndex = -1; // -1 = not hovering the grid at all -- the RAW cell under the cursor
 
     /** The exact grid cell (row*columns+col) under `pos`, anywhere across

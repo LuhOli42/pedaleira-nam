@@ -94,7 +94,7 @@ target_sources(PedaleiraNAM PRIVATE
   Source/UI/ChainContainer.cpp
   Source/UI/EffectBlockComponent.cpp
   Source/UI/FooterBar.cpp
-  Source/UI/IOSelectorBlock.cpp
+  Source/UI/RowEndpointBlock.cpp
   Source/UI/ModelListDialog.cpp
   Source/UI/OverlayHost.cpp
   Source/UI/ParameterPanel.cpp
