@@ -128,6 +128,10 @@ MainComponent::MainComponent()
             return;
         }
 
+        // Just dismissed by this very click -- see addEffectMenuClosedAtMs.
+        if (juce::Time::getMillisecondCounter() - addEffectMenuClosedAtMs < 200)
+            return;
+
         showAddEffectMenu (index);
     };
 
@@ -777,6 +781,7 @@ void MainComponent::showAddEffectMenu (int targetGridSlot)
         [this, idToKey, targetGridSlot] (int result)
         {
             addEffectMenuOpen = false;
+            addEffectMenuClosedAtMs = juce::Time::getMillisecondCounter();
             if (result > 0 && result - 1 < (int) idToKey.size())
                 addEffect (idToKey[(size_t) result - 1], targetGridSlot);
         });

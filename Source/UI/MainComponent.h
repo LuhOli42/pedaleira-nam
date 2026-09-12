@@ -154,10 +154,14 @@ private:
     juce::OwnedArray<EffectBlockComponent> blocks;
     EffectProcessor* selectedProcessor = nullptr;
 
-    // True while the add-effect list is on screen: the next click on the
-    // grid then just closes it, instead of dismissing it and immediately
-    // opening another one at the cell that was clicked.
+    // The click that dismisses the add-effect list ALSO reaches the grid
+    // underneath it, and JUCE runs the menu's own callback first -- so by
+    // the time the grid sees the click, any "is the menu open?" flag has
+    // already been cleared (that's why the first attempt at this didn't
+    // work). Remembering WHEN the list closed lets the grid tell "this is
+    // the click that just dismissed it" from "this is a new click".
     bool addEffectMenuOpen = false;
+    juce::uint32 addEffectMenuClosedAtMs = 0;
 
     struct RetiredProcessor
     {
