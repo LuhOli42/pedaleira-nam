@@ -99,7 +99,7 @@ MainComponent::MainComponent()
     // so it's the vertical scrollbar that's the overflow fallback.
     chainViewport.setViewedComponent (&chainContainer, false);
     chainViewport.setScrollBarsShown (false, false); // driven by chainScrollBar instead -- see its member comment
-    chainViewport.onScrolled = [this] { syncChainScrollBar(); repaint(); };
+    chainViewport.onScrolled = [this] { syncChainScrollBar(); layoutChain(); repaint(); };
     addAndMakeVisible (chainViewport);
 
     chainScrollBar.setAutoHide (false);
@@ -110,7 +110,20 @@ MainComponent::MainComponent()
     // The only way to add a block now -- hover the grid, a "+" appears
     // exactly under the cursor, click it. No permanent dashed-box tile
     // sitting there all the time any more -- see ChainContainer.h.
-    chainContainer.onSlotClicked = [this] (int index) { showAddEffectMenu (index); };
+    chainContainer.onSlotClicked = [this] (int index)
+    {
+        // Already picking an effect? This click just closes that list --
+        // opening a second one at the newly clicked cell reads as the menu
+        // refusing to go away (per user request 2026-09-11).
+        if (addEffectMenuOpen)
+        {
+            juce::PopupMenu::dismissAllActiveMenus();
+            addEffectMenuOpen = false;
+            return;
+        }
+
+        showAddEffectMenu (index);
+    };
 
     parameterPanel.onRemoveRequested = [this] (EffectProcessor* p) { removeEffect (p); };
     parameterPanel.setModelsDirectory (getModelsDirectory());
@@ -247,6 +260,17 @@ void MainComponent::selectBlock (EffectProcessor* processor)
     resized(); // the detail drawer only exists (and only takes up space) once something is selected
 }
 
+int MainComponent::feederRowFor (int row) const
+{
+    for (int candidate = 0; candidate < numRows; ++candidate)
+    {
+        const auto& routing = rowRouting[(size_t) candidate];
+        if (routing.dest == RowRouting::Dest::row && routing.destRow == row)
+            return candidate;
+    }
+    return -1;
+}
+
 void MainComponent::refreshRowEndpoints()
 {
     const auto inputNames = audioEngine.getAvailableInputChannelNames();
@@ -256,8 +280,16 @@ void MainComponent::refreshRowEndpoints()
     {
         const auto& routing = rowRouting[(size_t) row];
 
-        // Left: the device channel feeding this row, or nothing yet.
-        if (routing.inputChannel < 0)
+        // Left: whatever already feeds this row. A row fed by ANOTHER row
+        // shows that link rather than a "+" -- the "+" invites adding an
+        // input, and a second source on top of the incoming one would be
+        // exactly the contradiction the routing model avoids (per user
+        // request 2026-09-11: "quando a linha tiver sendo usada por um
+        // output ela pode sumir o input +").
+        const int feeder = feederRowFor (row);
+        if (feeder >= 0)
+            rowInputBlocks[(size_t) row].setDisplay ("FROM", "Line " + juce::String (feeder + 1));
+        else if (routing.inputChannel < 0)
             rowInputBlocks[(size_t) row].setDisplay ({}, {});
         else
             rowInputBlocks[(size_t) row].setDisplay ("IN",
@@ -347,17 +379,25 @@ void MainComponent::showRowInputMenu (int row)
     if (inputNames.isEmpty())
         inputNames.add ("Default");
 
+    const int feeder = feederRowFor (row);
+
     juce::PopupMenu menu;
-    menu.addItem (1, "Not connected", true, rowRouting[(size_t) row].inputChannel < 0);
+    menu.addItem (1, feeder >= 0 ? "Disconnect from Line " + juce::String (feeder + 1) : juce::String ("Not connected"),
+                   true, feeder < 0 && rowRouting[(size_t) row].inputChannel < 0);
     menu.addSeparator();
     for (int i = 0; i < inputNames.size(); ++i)
-        menu.addItem (i + 2, inputNames[i], true, rowRouting[(size_t) row].inputChannel == i);
+        menu.addItem (i + 2, inputNames[i], true, feeder < 0 && rowRouting[(size_t) row].inputChannel == i);
 
     menu.showMenuAsync (juce::PopupMenu::Options().withStandardItemHeight (touch::minTapTarget),
-        [this, row] (int result)
+        [this, row, feeder] (int result)
         {
             if (result <= 0)
                 return;
+
+            // Picking anything here replaces whatever fed this row, so the
+            // incoming row link (if any) has to go -- one source per row.
+            if (feeder >= 0)
+                rowRouting[(size_t) feeder].dest = RowRouting::Dest::none;
 
             rowRouting[(size_t) row].inputChannel = result == 1 ? -1 : result - 2;
 
@@ -420,6 +460,9 @@ void MainComponent::showRowOutputMenu (int row)
             {
                 r.dest = RowRouting::Dest::row;
                 r.destRow = result - rowItemBase;
+                // The target now has a source; a device input on top of it
+                // would be a second one (see showRowInputMenu()).
+                rowRouting[(size_t) r.destRow].inputChannel = -1;
             }
             else if (result - 2 < outputCount)
             {
@@ -523,9 +566,17 @@ void MainComponent::layoutChain()
     chainUsedRows = juce::jlimit (1, numRows, totalRows);
     chainContainer.setUsedRows (chainUsedRows);
 
+    // The rows live inside the scrolling viewport, so their endpoint tiles --
+    // which sit in the gutters OUTSIDE it -- have to be offset by the same
+    // scroll amount or they'd drift away from the row they belong to (the
+    // connectors in paint() already do this). Per user report 2026-09-11:
+    // "quando scrolamos as 4 linhas esses + e inputs tao se mexendo com o
+    // scroll".
+    const int scrollOffset = chainViewport.getViewPositionY();
+
     auto gutterRowSlot = [&] (juce::Rectangle<int> gutterColumn, int row)
     {
-        return juce::Rectangle<int> (gutterColumn.getX(), chainRowTop + row * (blockHeight + rowGap),
+        return juce::Rectangle<int> (gutterColumn.getX(), chainRowTop + row * (blockHeight + rowGap) - scrollOffset,
                                       gutterColumn.getWidth(), blockHeight);
     };
 
@@ -535,8 +586,19 @@ void MainComponent::layoutChain()
     // linha").
     for (int row = 0; row < numRows; ++row)
     {
-        rowInputBlocks[(size_t) row].setBounds (gutterRowSlot (leftGutterColumn, row).withSizeKeepingCentre (ioWidth, ioHeight));
-        rowOutputBlocks[(size_t) row].setBounds (gutterRowSlot (rightGutterColumn, row).withSizeKeepingCentre (ioWidth, ioHeight));
+        const auto inBounds = gutterRowSlot (leftGutterColumn, row).withSizeKeepingCentre (ioWidth, ioHeight);
+        const auto outBounds = gutterRowSlot (rightGutterColumn, row).withSizeKeepingCentre (ioWidth, ioHeight);
+
+        rowInputBlocks[(size_t) row].setBounds (inBounds);
+        rowOutputBlocks[(size_t) row].setBounds (outBounds);
+
+        // Scrolled past the viewport's band: the row itself is clipped away
+        // in there, so its endpoints would otherwise float over the top bar
+        // or the footer with no row to belong to.
+        const bool rowVisible = inBounds.getCentreY() > chainViewport.getY()
+                                 && inBounds.getCentreY() < chainViewport.getBottom();
+        rowInputBlocks[(size_t) row].setVisible (rowVisible);
+        rowOutputBlocks[(size_t) row].setVisible (rowVisible);
     }
 
     // Where a row-to-row link crosses the grid: midway between the two rows'
@@ -666,9 +728,11 @@ void MainComponent::showAddEffectMenu (int targetGridSlot)
 
     // Big is fine -- comfortable to tap on a 10" touchscreen matters more
     // than compactness (see AGENT.md's UI/UX Design Philosophy).
+    addEffectMenuOpen = true;
     menu.showMenuAsync (juce::PopupMenu::Options().withStandardItemHeight (touch::minTapTarget),
         [this, idToKey, targetGridSlot] (int result)
         {
+            addEffectMenuOpen = false;
             if (result > 0 && result - 1 < (int) idToKey.size())
                 addEffect (idToKey[(size_t) result - 1], targetGridSlot);
         });

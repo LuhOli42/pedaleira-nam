@@ -110,6 +110,10 @@ private:
     };
 
     void showRowInputMenu (int row);
+    /** Which row (if any) currently sends its audio into `row` -- at most
+        one, since a row's destination is a single choice. -1 when nothing
+        feeds it and it's waiting for a device input instead. */
+    int feederRowFor (int row) const;
     void showRowOutputMenu (int row);
     /** True if making `row` feed `candidateTarget` would eventually lead
         back to `row` -- a loop the audio could never be evaluated in. */
@@ -132,6 +136,11 @@ private:
     std::vector<std::unique_ptr<EffectProcessor>> chain;
     juce::OwnedArray<EffectBlockComponent> blocks;
     EffectProcessor* selectedProcessor = nullptr;
+
+    // True while the add-effect list is on screen: the next click on the
+    // grid then just closes it, instead of dismissing it and immediately
+    // opening another one at the cell that was clicked.
+    bool addEffectMenuOpen = false;
 
     struct RetiredProcessor
     {
