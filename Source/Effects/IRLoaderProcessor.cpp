@@ -141,19 +141,14 @@ void IRLoaderProcessor::setState (const juce::XmlElement& state)
 
 void IRLoaderProcessor::drawIcon (juce::Graphics& g, juce::Rectangle<float> b) const
 {
-    // See docs/icons/AGENT-icon-notes.md / Assets/Icons/hall.svg
-    // (Reverb role) and cab.svg (Cab role) -- embedded SVGs, not
-    // hand-transcribed juce::Path calls; see IconKit.h for why.
-    if (isReverbRole())
-    {
-        static const std::unique_ptr<juce::Drawable> svg = icon::loadSvg (IconData::hall_svg, IconData::hall_svgSize);
-        icon::drawSvg (g, b, svg.get());
-    }
-    else
-    {
-        static const std::unique_ptr<juce::Drawable> svg = icon::loadSvg (IconData::cab_svg, IconData::cab_svgSize);
-        icon::drawSvg (g, b, svg.get());
-    }
+    // Both roles share cab.svg -- embedded SVG, not a hand-transcribed
+    // juce::Path call; see IconKit.h for why. The Reverb role used to
+    // borrow hall.svg as a stand-in (see docs/icons/AGENT-icon-notes.md),
+    // but that glyph now belongs to HallReverbProcessor's real algorithmic
+    // "Hall" block, so this generic loaded-IR box is the reuse until the
+    // reference sheet's own grey "IR Loader" utility glyph gets confirmed.
+    static const std::unique_ptr<juce::Drawable> svg = icon::loadSvg (IconData::cab_svg, IconData::cab_svgSize);
+    icon::drawSvg (g, b, svg.get());
 }
 
 } // namespace openguitarmultifx

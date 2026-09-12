@@ -9,6 +9,7 @@
 #include "Effects/OverdriveProcessor.h"
 #include "Effects/ReverbProcessor.h"
 #include "Effects/SpringReverbProcessor.h"
+#include "Effects/HallReverbProcessor.h"
 #include "Effects/PingPongDelayProcessor.h"
 #include "Effects/ReverseDelayProcessor.h"
 #include "Effects/HoldProcessor.h"
@@ -38,15 +39,16 @@ void registerBuiltInEffects (EffectRegistry& registry)
     registry.registerType ("Cab", [] { return std::make_unique<IRLoaderProcessor> ("Cab"); });
     registry.registerType ("Reverb", [] { return std::make_unique<IRLoaderProcessor> ("Reverb"); });
 
-    // Phase 2: Delay + Reverb. One representative processor per category
-    // for now (matching Phase 1's approach of Gate/Compressor/Overdrive
-    // rather than every named variant on the icon sheet) -- the other 8
-    // Delay and 9 Reverb glyphs stay documented-but-unbuilt in
-    // docs/icons/AGENT-icon-notes.md until they get their own processors.
+    // Phase 2: Delay + Reverb. Working through the icon sheet's named
+    // variants one at a time -- each remaining Delay/Reverb glyph stays
+    // documented-but-unbuilt in docs/icons/AGENT-icon-notes.md until it
+    // gets its own processor (only glyphs the user has already approved
+    // get wired up; see that doc's rule on never guessing a new one).
     registry.registerType ("DigitalDelay", [] { return std::make_unique<DelayProcessor>(); });
     registry.registerType ("TapeDelay", [] { return std::make_unique<TapeDelayProcessor>(); });
     registry.registerType ("Ambient", [] { return std::make_unique<ReverbProcessor>(); });
     registry.registerType ("Spring", [] { return std::make_unique<SpringReverbProcessor>(); });
+    registry.registerType ("Hall", [] { return std::make_unique<HallReverbProcessor>(); });
     registry.registerType ("PingPong", [] { return std::make_unique<PingPongDelayProcessor>(); });
     registry.registerType ("ReverseDelay", [] { return std::make_unique<ReverseDelayProcessor>(); });
     registry.registerType ("Hold", [] { return std::make_unique<HoldProcessor>(); });

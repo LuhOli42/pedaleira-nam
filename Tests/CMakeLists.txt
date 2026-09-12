@@ -16,6 +16,7 @@ target_sources(OpenGuitarMultiFx_Tests PRIVATE
   TapeDelayProcessorTests.cpp
   ReverbProcessorTests.cpp
   SpringReverbProcessorTests.cpp
+  HallReverbProcessorTests.cpp
   PingPongDelayProcessorTests.cpp
   ReverseDelayProcessorTests.cpp
   HoldProcessorTests.cpp
@@ -31,6 +32,7 @@ target_sources(OpenGuitarMultiFx_Tests PRIVATE
   ../Source/Effects/TapeDelayProcessor.cpp
   ../Source/Effects/ReverbProcessor.cpp
   ../Source/Effects/SpringReverbProcessor.cpp
+  ../Source/Effects/HallReverbProcessor.cpp
   ../Source/Effects/PingPongDelayProcessor.cpp
   ../Source/Effects/ReverseDelayProcessor.cpp
   ../Source/Effects/HoldProcessor.cpp

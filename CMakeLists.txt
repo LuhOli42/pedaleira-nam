@@ -91,6 +91,7 @@ target_sources(OpenGuitarMultiFx PRIVATE
   Source/Effects/HoldProcessor.cpp
   Source/Effects/ReverbProcessor.cpp
   Source/Effects/SpringReverbProcessor.cpp
+  Source/Effects/HallReverbProcessor.cpp
   Source/UI/ChainContainer.cpp
   Source/UI/EffectBlockComponent.cpp
   Source/UI/FooterBar.cpp

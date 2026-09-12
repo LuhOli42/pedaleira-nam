@@ -116,7 +116,7 @@ palette now for effects that don't exist yet.
 | NAMProcessor ("Neural Amp" / "Neural Pedal") | Amplificadores → Neura Amp / Neura Pedal | `Assets/Icons/neura_chip.svg` (same glyph for both roles) | `Source/Effects/NAMProcessor.cpp` |
 | NAMProcessor ("Neural Amp + Cab") | Amplificadores → Neura Amp + Cab | `Assets/Icons/neura_chip_cab.svg` (chip over a cab box) | `Source/Effects/NAMProcessor.cpp` |
 | IRLoaderProcessor ("Cab") | Amplificadores → Cab | `Assets/Icons/cab.svg` (box + 2x2 outline circles) | `Source/Effects/IRLoaderProcessor.cpp` |
-| IRLoaderProcessor ("Reverb") | Reverb → Hall | `Assets/Icons/hall.svg` (tall pointed arch — this role covers every IR-based space in one block, so Hall stands in as the one glyph until Plate/Room/Spring/... are separate blocks) | `Source/Effects/IRLoaderProcessor.cpp` |
+| IRLoaderProcessor ("Reverb") | Utilitarios → IR Loader (generic loaded-space convolution, not a named reverb type) | `Assets/Icons/cab.svg` (reused from the Cab role — was `hall.svg` as a stand-in until a real Hall block existed; freed up 2026-09-12 for HallReverbProcessor below, since the sheet's own dedicated grey "IR Loader" utility glyph still isn't confirmed) | `Source/Effects/IRLoaderProcessor.cpp` |
 | DelayProcessor | Delay → Digital Delay | `Assets/Icons/digital_delay.svg` (3 filled dots decreasing in size) | `Source/Effects/DelayProcessor.cpp` |
 | TapeDelayProcessor | Delay → Tape Delay | `Assets/Icons/tape_delay.svg` (box + 2 reels + baseline) | `Source/Effects/TapeDelayProcessor.cpp` |
 | ReverbProcessor ("Ambient") | Reverb → Ambient | `Assets/Icons/ambient.svg` (3 concentric circles) | `Source/Effects/ReverbProcessor.cpp` |
@@ -124,6 +124,7 @@ palette now for effects that don't exist yet.
 | PingPongDelayProcessor | Delay → Ping Pong | `Assets/Icons/ping_pong.svg` (two rails + a bouncing path) | `Source/Effects/PingPongDelayProcessor.cpp` |
 | ReverseDelayProcessor | Delay → Reverse Delay | `Assets/Icons/reverse_delay.svg` (rewind triangle + bar) | `Source/Effects/ReverseDelayProcessor.cpp` |
 | HoldProcessor | Delay → Hold | `Assets/Icons/hold.svg` (two bare pause bars) | `Source/Effects/HoldProcessor.cpp` |
+| HallReverbProcessor | Reverb → Hall | `Assets/Icons/hall.svg` (tall pointed arch) — now this class's alone, see the IRLoaderProcessor row above | `Source/Effects/HallReverbProcessor.cpp` |
 
 **Phase 2 note (2026-09-11):** `DelayProcessor`/`TapeDelayProcessor`/
 `ReverbProcessor`/`SpringReverbProcessor` don't cover every Delay/Reverb
