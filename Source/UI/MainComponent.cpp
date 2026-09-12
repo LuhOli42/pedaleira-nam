@@ -21,6 +21,12 @@ namespace
     constexpr int ioWidth = 64;
     constexpr int ioHeight = 58;
 
+    // Extra width in each gutter, OUTSIDE the endpoint tile, purely for the
+    // vertical part of a row-to-row connector to run down. Without it a link
+    // that skips a row has nowhere to go but straight through that row's
+    // endpoint tile (per user report 2026-09-11, "ele fica sobreposto").
+    constexpr int cableLane = 20;
+
     // Taller than touch::minTapTarget -- this is where the preset
     // number/name live, and per the user's explicit ask they need to be
     // readable from a few feet away on a stage, not just tappable.
@@ -142,8 +148,8 @@ MainComponent::MainComponent()
     // ends. Rows are independent until you say otherwise (user decision
     // 2026-09-11).
     rowRouting[0].inputChannel = audioEngine.getInputChannel();
-    rowRouting[0].dest = RowRouting::Dest::device;
-    rowRouting[0].destOutputPair = audioEngine.getOutputChannelPair();
+    rowRouting[0].toDevice = true;
+    rowRouting[0].deviceOutputPair = audioEngine.getOutputChannelPair();
 
     for (int row = 0; row < numRows; ++row)
     {
@@ -263,18 +269,33 @@ void MainComponent::selectBlock (EffectProcessor* processor)
 int MainComponent::feederRowFor (int row) const
 {
     for (int candidate = 0; candidate < numRows; ++candidate)
-    {
-        const auto& routing = rowRouting[(size_t) candidate];
-        if (routing.dest == RowRouting::Dest::row && routing.destRow == row)
+        if (rowRouting[(size_t) candidate].toRows[(size_t) row])
             return candidate;
-    }
     return -1;
+}
+
+juce::String MainComponent::describeRowDestinations (int row) const
+{
+    const auto& routing = rowRouting[(size_t) row];
+    juce::StringArray parts;
+
+    if (routing.toDevice)
+    {
+        const auto outputNames = audioEngine.getAvailableOutputPairNames();
+        const int pairIndex = routing.deviceOutputPair / 2;
+        parts.add (pairIndex < outputNames.size() ? outputNames[pairIndex] : juce::String ("Out"));
+    }
+
+    for (int target = 0; target < numRows; ++target)
+        if (routing.toRows[(size_t) target])
+            parts.add ("Line " + juce::String (target + 1));
+
+    return parts.joinIntoString (" + ");
 }
 
 void MainComponent::refreshRowEndpoints()
 {
     const auto inputNames = audioEngine.getAvailableInputChannelNames();
-    const auto outputNames = audioEngine.getAvailableOutputPairNames();
 
     for (int row = 0; row < numRows; ++row)
     {
@@ -295,52 +316,50 @@ void MainComponent::refreshRowEndpoints()
             rowInputBlocks[(size_t) row].setDisplay ("IN",
                 routing.inputChannel < inputNames.size() ? inputNames[routing.inputChannel] : juce::String ("Default"));
 
-        // Right: a device output pair, another row, or nothing yet.
-        switch (routing.dest)
-        {
-            case RowRouting::Dest::device:
-            {
-                const int pairIndex = routing.destOutputPair / 2;
-                rowOutputBlocks[(size_t) row].setDisplay ("OUT",
-                    pairIndex < outputNames.size() ? outputNames[pairIndex] : juce::String ("Default"));
-                break;
-            }
-            case RowRouting::Dest::row:
-                rowOutputBlocks[(size_t) row].setDisplay ("TO", "Line " + juce::String (routing.destRow + 1));
-                break;
-            case RowRouting::Dest::none:
-            default:
-                rowOutputBlocks[(size_t) row].setDisplay ({}, {});
-                break;
-        }
+        // Right: everything this row feeds -- possibly several at once, so
+        // this summarises rather than naming one destination.
+        if (! routing.feedsAnything())
+            rowOutputBlocks[(size_t) row].setDisplay ({}, {});
+        else
+            rowOutputBlocks[(size_t) row].setDisplay ("TO", describeRowDestinations (row));
     }
 }
 
 bool MainComponent::rowLinkWouldLoop (int row, int candidateTarget) const
 {
-    // Walk forward from the proposed target: if the chain of row->row links
-    // leads back to `row`, the audio would have to feed itself.
-    int current = candidateTarget;
-    for (int guard = 0; guard < numRows + 1; ++guard)
+    // Walk forward from the proposed target across EVERY branch (a row can
+    // feed several now): if any of them leads back to `row`, the audio
+    // would have to feed itself.
+    if (candidateTarget < 0 || candidateTarget >= numRows)
+        return false;
+
+    std::array<bool, numRows> seen {};
+    std::vector<int> stack { candidateTarget };
+
+    while (! stack.empty())
     {
-        if (current < 0 || current >= numRows)
-            return false;
+        const int current = stack.back();
+        stack.pop_back();
+
         if (current == row)
             return true;
+        if (seen[(size_t) current])
+            continue;
+        seen[(size_t) current] = true;
 
-        const auto& routing = rowRouting[(size_t) current];
-        if (routing.dest != RowRouting::Dest::row)
-            return false;
-        current = routing.destRow;
+        for (int next = 0; next < numRows; ++next)
+            if (rowRouting[(size_t) current].toRows[(size_t) next])
+                stack.push_back (next);
     }
-    return true; // ran out of guard -- treat as a loop rather than risk one
+
+    return false;
 }
 
 std::vector<int> MainComponent::rowsFeedingInto (int row) const
 {
-    // Walk BACKWARDS from `row` to whichever row has a device input, then
-    // return that path front-to-back. Each row has at most one feeder (a
-    // row's dest is a single choice), so this is a simple walk, not a search.
+    // Walk BACKWARDS from `row` to whichever row has a device input. A row
+    // takes at most one source (splits fan OUT, they don't merge back in),
+    // so this stays a simple walk rather than a search.
     std::vector<int> path;
     int current = row;
 
@@ -351,17 +370,7 @@ std::vector<int> MainComponent::rowsFeedingInto (int row) const
         if (rowRouting[(size_t) current].inputChannel >= 0)
             return path; // reached a row that's actually fed by the device
 
-        int feeder = -1;
-        for (int candidate = 0; candidate < numRows; ++candidate)
-        {
-            const auto& routing = rowRouting[(size_t) candidate];
-            if (routing.dest == RowRouting::Dest::row && routing.destRow == current)
-            {
-                feeder = candidate;
-                break;
-            }
-        }
-
+        const int feeder = feederRowFor (current);
         if (feeder < 0)
             return {}; // nothing feeds this row -- it's silent
         current = feeder;
@@ -397,7 +406,7 @@ void MainComponent::showRowInputMenu (int row)
             // Picking anything here replaces whatever fed this row, so the
             // incoming row link (if any) has to go -- one source per row.
             if (feeder >= 0)
-                rowRouting[(size_t) feeder].dest = RowRouting::Dest::none;
+                rowRouting[(size_t) feeder].toRows[(size_t) row] = false;
 
             rowRouting[(size_t) row].inputChannel = result == 1 ? -1 : result - 2;
 
@@ -422,16 +431,17 @@ void MainComponent::showRowOutputMenu (int row)
 
     const auto& routing = rowRouting[(size_t) row];
 
+    // Every entry is a TOGGLE, not a choice: a row can feed the device and
+    // several other rows at once (a split). The menu closes after each
+    // toggle -- tap the tile again to add or remove another destination.
     juce::PopupMenu menu;
-    menu.addItem (1, "Not connected", true, routing.dest == RowRouting::Dest::none);
+    menu.addItem (1, "Not connected", routing.feedsAnything(), false);
     menu.addSeparator();
 
     for (int i = 0; i < outputNames.size(); ++i)
         menu.addItem (i + 2, "Output " + outputNames[i], true,
-                       routing.dest == RowRouting::Dest::device && routing.destOutputPair / 2 == i);
+                       routing.toDevice && routing.deviceOutputPair / 2 == i);
 
-    // ...and the other rows. A row that would loop back into this one is
-    // shown greyed rather than hidden, so it's clear WHY it isn't offered.
     menu.addSeparator();
     constexpr int rowItemBase = 100;
     for (int target = 0; target < numRows; ++target)
@@ -439,9 +449,17 @@ void MainComponent::showRowOutputMenu (int row)
         if (target == row)
             continue;
 
-        const bool allowed = ! rowLinkWouldLoop (row, target);
-        menu.addItem (rowItemBase + target, "Line " + juce::String (target + 1), allowed,
-                       routing.dest == RowRouting::Dest::row && routing.destRow == target);
+        const bool alreadyOn = routing.toRows[(size_t) target];
+        const int otherFeeder = feederRowFor (target);
+
+        // Offered unless it would loop, or another row already feeds it --
+        // summing two rows into one is a merge, which the engine can't do
+        // yet. Greyed rather than hidden so the reason is visible.
+        const bool allowed = alreadyOn
+                              || (! rowLinkWouldLoop (row, target)
+                                  && (otherFeeder < 0 || otherFeeder == row));
+
+        menu.addItem (rowItemBase + target, "Line " + juce::String (target + 1), allowed, alreadyOn);
     }
 
     menu.showMenuAsync (juce::PopupMenu::Options().withStandardItemHeight (touch::minTapTarget),
@@ -454,21 +472,28 @@ void MainComponent::showRowOutputMenu (int row)
 
             if (result == 1)
             {
-                r.dest = RowRouting::Dest::none;
+                r.toDevice = false;
+                r.toRows.fill (false);
             }
             else if (result >= rowItemBase)
             {
-                r.dest = RowRouting::Dest::row;
-                r.destRow = result - rowItemBase;
+                const int target = result - rowItemBase;
+                const bool nowOn = ! r.toRows[(size_t) target];
+                r.toRows[(size_t) target] = nowOn;
+
                 // The target now has a source; a device input on top of it
                 // would be a second one (see showRowInputMenu()).
-                rowRouting[(size_t) r.destRow].inputChannel = -1;
+                if (nowOn)
+                    rowRouting[(size_t) target].inputChannel = -1;
             }
             else if (result - 2 < outputCount)
             {
-                r.dest = RowRouting::Dest::device;
-                r.destOutputPair = (result - 2) * 2;
-                audioEngine.setOutputChannelPair (r.destOutputPair);
+                const int pair = (result - 2) * 2;
+                // Same output twice = turn it off; a different one = move it.
+                r.toDevice = ! (r.toDevice && r.deviceOutputPair == pair);
+                r.deviceOutputPair = pair;
+                if (r.toDevice)
+                    audioEngine.setOutputChannelPair (pair);
             }
 
             refreshRowEndpoints();
@@ -479,33 +504,43 @@ void MainComponent::showRowOutputMenu (int row)
 
 void MainComponent::rebuildSignalGraph()
 {
-    // Processing order follows the ROW LINKS, not the flat block array: the
-    // blocks of a row run left to right, then whatever row that row feeds,
-    // and so on. A row nothing feeds contributes nothing at all -- which is
-    // exactly what its dimmed, unrouted endpoints already say on screen.
+    // Order follows the ROW LINKS, not the flat block array: a row's blocks
+    // run left to right, then whatever rows it feeds, and so on.
+    //
+    // A split (one row feeding several) is drawn and stored faithfully, but
+    // the engine still runs ONE serial chain -- SignalGraph has no notion of
+    // parallel buses or mixing them back together. Branches are therefore
+    // flattened into a single order here, which is an approximation, not the
+    // real thing. Real parallel processing is engine work (see AGENTS.md);
+    // until then a split sounds like the branches in series.
     auto signalGraph = std::make_unique<SignalGraph>();
 
-    // Start from the row that reaches the device output and walk back to
-    // whichever row the device input feeds. Only one row can be the terminus
-    // today (the engine has a single output pair); a second one routed to
-    // the device is simply not reached.
-    std::vector<int> orderedRows;
-    for (int row = 0; row < numRows; ++row)
-    {
-        if (rowRouting[(size_t) row].dest == RowRouting::Dest::device)
-        {
-            orderedRows = rowsFeedingInto (row);
-            break;
-        }
-    }
+    // Start wherever the device input lands, then follow the links outwards.
+    std::array<bool, numRows> visited {};
+    std::vector<int> queue;
 
-    for (const int row : orderedRows)
+    for (int row = 0; row < numRows; ++row)
+        if (rowRouting[(size_t) row].inputChannel >= 0)
+            queue.push_back (row);
+
+    while (! queue.empty())
     {
+        const int row = queue.front();
+        queue.erase (queue.begin());
+
+        if (visited[(size_t) row])
+            continue;
+        visited[(size_t) row] = true;
+
         // `blocks` is sorted by gridSlot and gridSlot == row * chainColumns +
         // col, so a row's blocks are already contiguous and in column order.
         for (auto* block : blocks)
             if (block->gridSlot / chainColumns == row)
                 signalGraph->addProcessor (&block->processor);
+
+        for (int target = 0; target < numRows; ++target)
+            if (rowRouting[(size_t) row].toRows[(size_t) target])
+                queue.push_back (target);
     }
 
     audioEngine.setSignalGraph (std::move (signalGraph));
@@ -586,8 +621,12 @@ void MainComponent::layoutChain()
     // linha").
     for (int row = 0; row < numRows; ++row)
     {
-        const auto inBounds = gutterRowSlot (leftGutterColumn, row).withSizeKeepingCentre (ioWidth, ioHeight);
-        const auto outBounds = gutterRowSlot (rightGutterColumn, row).withSizeKeepingCentre (ioWidth, ioHeight);
+        // Tiles hug the grid side of their gutter; the cable lane is the
+        // strip left over on the outer side.
+        const auto leftSlot = gutterRowSlot (leftGutterColumn, row);
+        const auto rightSlot = gutterRowSlot (rightGutterColumn, row);
+        const auto inBounds = leftSlot.withTrimmedLeft (cableLane).withSizeKeepingCentre (ioWidth, ioHeight);
+        const auto outBounds = rightSlot.withTrimmedRight (cableLane).withSizeKeepingCentre (ioWidth, ioHeight);
 
         rowInputBlocks[(size_t) row].setBounds (inBounds);
         rowOutputBlocks[(size_t) row].setBounds (outBounds);
@@ -608,12 +647,17 @@ void MainComponent::layoutChain()
     for (int row = 0; row < numRows; ++row)
     {
         const auto& routing = rowRouting[(size_t) row];
-        if (routing.dest != RowRouting::Dest::row || routing.destRow < 0)
-            continue;
 
-        const int fromY = row * (blockHeight + rowGap) + blockHeight / 2;
-        const int toY = routing.destRow * (blockHeight + rowGap) + blockHeight / 2;
-        crossings.push_back ((fromY + toY) / 2);
+        for (int target = 0; target < numRows; ++target)
+        {
+            if (! routing.toRows[(size_t) target])
+                continue;
+
+            const int fromY = row * (blockHeight + rowGap) + blockHeight / 2;
+            const int toY = target * (blockHeight + rowGap) + blockHeight / 2;
+            const int dir = toY > fromY ? 1 : -1;
+            crossings.push_back (fromY + dir * (blockHeight / 2 + rowGap / 2)); // same gap paint() uses
+        }
     }
     chainContainer.setCrossings (std::move (crossings));
 
@@ -905,8 +949,8 @@ void MainComponent::applyPresetXml (const juce::XmlElement& xml)
         audioEngine.setInputChannel (inCh);
         audioEngine.setOutputChannelPair (outPair);
         rowRouting[0].inputChannel = inCh;
-        rowRouting[0].dest = RowRouting::Dest::device;
-        rowRouting[0].destOutputPair = outPair;
+        rowRouting[0].toDevice = true;
+        rowRouting[0].deviceOutputPair = outPair;
     }
 
     rebuildSignalGraph();
@@ -988,9 +1032,9 @@ void MainComponent::resized()
     chainScrollBar.setBounds (chainRow.removeFromRight (scrollBarWidth));
     chainRow.removeFromRight (6);
 
-    leftGutterColumn = chainRow.removeFromLeft (ioWidth);
+    leftGutterColumn = chainRow.removeFromLeft (ioWidth + cableLane);
     chainRow.removeFromLeft (8);
-    rightGutterColumn = chainRow.removeFromRight (ioWidth);
+    rightGutterColumn = chainRow.removeFromRight (ioWidth + cableLane);
     chainRow.removeFromRight (8);
     chainViewport.setBounds (chainRow);
     layoutChain();
@@ -1110,7 +1154,10 @@ void MainComponent::paint (juce::Graphics& g)
     for (int row = 0; row < numRows; ++row)
     {
         const auto& routing = rowRouting[(size_t) row];
-        if (routing.dest != RowRouting::Dest::row || routing.destRow < 0 || routing.destRow >= numRows)
+
+        for (int target = 0; target < numRows; ++target)
+        {
+        if (! routing.toRows[(size_t) target])
             continue;
 
         const auto rowCentreY = [this, scrollOffset] (int r)
@@ -1120,14 +1167,20 @@ void MainComponent::paint (juce::Graphics& g)
         };
 
         const float fromY = rowCentreY (row);
-        const float toY = rowCentreY (routing.destRow);
-        const float crossY = (fromY + toY) * 0.5f; // matches layoutChain()'s crossing Y
+        const float toY = rowCentreY (target);
         const float bendDir = toY > fromY ? 1.0f : -1.0f; // links can run upwards too
+
+        // Cross in the GAP immediately beyond the source row, never at the
+        // midpoint between the two rows -- for a link that skips a row the
+        // midpoint lands exactly on the skipped row's own signal line, which
+        // read as the connector being superimposed on it (user report
+        // 2026-09-11: "ele fica sobreposto com a linha normal").
+        const float crossY = fromY + bendDir * ((float) blockHeight * 0.5f + (float) rowGap * 0.5f);
 
         // Out of the source row's right end, around through the right
         // gutter, across (ChainContainer draws that middle span), then down
         // the left gutter and into the target row's left end.
-        const float rightX = (float) rightGutterColumn.getCentreX();
+        const float rightX = (float) rightGutterColumn.getRight() - cableLane * 0.5f;
         juce::Path rightSide;
         rightSide.startNewSubPath (rightEdge, fromY);
         rightSide.lineTo (rightX - cornerRadius, fromY);
@@ -1137,7 +1190,7 @@ void MainComponent::paint (juce::Graphics& g)
         rightSide.lineTo (rightEdge, crossY);
         g.strokePath (rightSide, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
-        const float leftX = (float) leftGutterColumn.getCentreX();
+        const float leftX = (float) leftGutterColumn.getX() + cableLane * 0.5f;
         juce::Path leftSide;
         leftSide.startNewSubPath (leftEdge, crossY);
         leftSide.lineTo (leftX + cornerRadius, crossY);
@@ -1146,6 +1199,7 @@ void MainComponent::paint (juce::Graphics& g)
         leftSide.quadraticTo (leftX, toY, leftX + cornerRadius, toY);
         leftSide.lineTo (leftEdge, toY);
         g.strokePath (leftSide, juce::PathStrokeType (2.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        }
     }
 }
 

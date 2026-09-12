@@ -101,23 +101,40 @@ private:
         always implicitly flowed into row N+1, is gone. */
     struct RowRouting
     {
-        enum class Dest { none, device, row };
-
         int inputChannel = -1;   // device input channel feeding this row; -1 = unfed
-        Dest dest = Dest::none;
-        int destOutputPair = 0;  // device output pair, when dest == device
-        int destRow = -1;        // another row, when dest == row
+
+        // A row's output can go to SEVERAL places at once -- that's a split
+        // (user request 2026-09-11: "out 1 pra linha 2 e 3 ao mesmo tempo,
+        // sinal splitado"). Destinations are independent toggles, not one
+        // choice, so "device output AND line 3" is expressible too.
+        bool toDevice = false;
+        int deviceOutputPair = 0;
+        std::array<bool, numRows> toRows {};
+
+        bool feedsAnything() const
+        {
+            if (toDevice)
+                return true;
+            for (const bool t : toRows)
+                if (t)
+                    return true;
+            return false;
+        }
     };
 
     void showRowInputMenu (int row);
-    /** Which row (if any) currently sends its audio into `row` -- at most
-        one, since a row's destination is a single choice. -1 when nothing
-        feeds it and it's waiting for a device input instead. */
+    /** Which row (if any) currently sends its audio into `row`. A row takes
+        at most one source -- summing two rows into one is a merge, which
+        the engine can't do yet -- so targets that are already fed aren't
+        offered. -1 when nothing feeds it. */
     int feederRowFor (int row) const;
     void showRowOutputMenu (int row);
     /** True if making `row` feed `candidateTarget` would eventually lead
-        back to `row` -- a loop the audio could never be evaluated in. */
+        back to `row` -- a loop the audio could never be evaluated in.
+        Follows every branch, since a row can now feed several. */
     bool rowLinkWouldLoop (int row, int candidateTarget) const;
+    /** "Line 2, 3" / "Out 1/2 + Line 3" -- what a row's output tile shows. */
+    juce::String describeRowDestinations (int row) const;
     void refreshRowEndpoints();
     /** Rows whose audio reaches this one, in feed order, starting from a
         row with a device input. Empty if `row` is never fed. */
