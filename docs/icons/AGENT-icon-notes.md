@@ -137,6 +137,9 @@ palette now for effects that don't exist yet.
 | VibratoProcessor | Modulacao → Vibrato | `Assets/Icons/vibrato.svg` (one wave, wobbling period) | `Source/Effects/VibratoProcessor.cpp` |
 | FlangerProcessor | Modulacao → Flanger | `Assets/Icons/flanger.svg` (same wave twice, dotted one trailing behind -- redrawn twice: first as comb teeth, then a diagonal sweep arrow, before landing on this delayed-copy pairing per direct user description) | `Source/Effects/FlangerProcessor.cpp` |
 | PhaserProcessor | Modulacao → Phaser | `Assets/Icons/phaser.svg` (solid wave + dotted vertically-inverted mirror -- redrawn from an earlier spiral/wave-through-rings design) | `Source/Effects/PhaserProcessor.cpp` |
+| RotaryProcessor | Modulacao → Rotary | `Assets/Icons/rotary.svg` (single spin arrow around a centre point -- redrawn from an earlier 3-blade rotor) | `Source/Effects/RotaryProcessor.cpp` |
+| UniVibeProcessor | Modulacao → Uni-Vibe | `Assets/Icons/uni_vibe.svg` (plain circle, glowing centre -- redrawn from an earlier organic blob per direct user request) | `Source/Effects/UniVibeProcessor.cpp` |
+| PitchModProcessor | Modulacao → Pitch Mod | `Assets/Icons/pitch_mod.svg` (wave with arrows pointing both up and down) | `Source/Effects/PitchModProcessor.cpp` |
 
 **Phase 2 note (2026-09-11):** `DelayProcessor`/`TapeDelayProcessor`/
 `ReverbProcessor`/`SpringReverbProcessor` don't cover every Delay/Reverb

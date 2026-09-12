@@ -29,6 +29,9 @@ target_sources(OpenGuitarMultiFx_Tests PRIVATE
   VibratoProcessorTests.cpp
   FlangerProcessorTests.cpp
   PhaserProcessorTests.cpp
+  RotaryProcessorTests.cpp
+  UniVibeProcessorTests.cpp
+  PitchModProcessorTests.cpp
   PingPongDelayProcessorTests.cpp
   ReverseDelayProcessorTests.cpp
   HoldProcessorTests.cpp
@@ -57,6 +60,9 @@ target_sources(OpenGuitarMultiFx_Tests PRIVATE
   ../Source/Effects/VibratoProcessor.cpp
   ../Source/Effects/FlangerProcessor.cpp
   ../Source/Effects/PhaserProcessor.cpp
+  ../Source/Effects/RotaryProcessor.cpp
+  ../Source/Effects/UniVibeProcessor.cpp
+  ../Source/Effects/PitchModProcessor.cpp
   ../Source/Effects/PingPongDelayProcessor.cpp
   ../Source/Effects/ReverseDelayProcessor.cpp
   ../Source/Effects/HoldProcessor.cpp

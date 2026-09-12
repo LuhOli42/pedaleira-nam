@@ -119,6 +119,9 @@ target_sources(OpenGuitarMultiFx PRIVATE
   Source/Effects/VibratoProcessor.cpp
   Source/Effects/FlangerProcessor.cpp
   Source/Effects/PhaserProcessor.cpp
+  Source/Effects/RotaryProcessor.cpp
+  Source/Effects/UniVibeProcessor.cpp
+  Source/Effects/PitchModProcessor.cpp
   Source/UI/ChainContainer.cpp
   Source/UI/EffectBlockComponent.cpp
   Source/UI/FooterBar.cpp
